@@ -110,6 +110,7 @@ class LLMService:
         when external API keys are unavailable.
         """
         last_message = messages[-1]["content"] if messages else ""
+        all_content = " ".join([m.get("content", "") for m in messages]).lower()
 
         if agent_name == "resume_parser":
             return json.dumps({
@@ -206,18 +207,23 @@ class LLMService:
             ])
 
         elif agent_name == "interview_conductor":
+            if "probing their mention of:" in all_content:
+                topic = all_content.split("probing their mention of:")[-1].strip().split("\n")[0]
+                return f"You mentioned {topic} in your explanation—could you tell me why you chose that specifically over alternatives, and how you handled potential failure modes or trade-offs?"
             return (
                 "Thank you for sharing that. I see from your resume that you built a distributed caching system using Python and Raft. "
                 "Could you walk me through the specific trade-offs you considered between consistency and latency when designing the replication protocol?"
             )
 
         elif agent_name == "evaluate_response":
+            probe = None
+            if any(w in all_content for w in ["redis", "caching", "cache", "kafka", "raft", "sharding", "postgres"]):
+                probe = "Redis and caching trade-offs"
             return json.dumps({
                 "score": 75.0,
                 "feedback": "Strong understanding of distributed systems trade-offs and CAP theorem.",
-                "difficulty_adjustment": "harder",
-                "key_strengths": ["Clear articulation of CAP theorem", "Addressed network latency implications"],
-                "areas_to_improve": ["Could have detailed split-brain election timeouts further"]
+                "difficulty_adjustment": "same",
+                "probe_topic": probe
             })
 
         elif agent_name == "feedback_generator":

@@ -17,19 +17,25 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
     current_q = questions[idx] if idx < len(questions) else {}
     candidate_answer = state.get("latest_candidate_response", "")
 
+    follow_ups_done = state.get("follow_up_count", 0)
+
     prompt = (
-        f"You are evaluating a candidate's response to the interview question:\n"
+        f"You are a Senior Staff Engineer evaluating a candidate's response in an interview.\n"
         f"Question: {current_q.get('title')} - {current_q.get('description')}\n"
         f"Expected Key Points: {', '.join(current_q.get('expected_key_points', []))}\n\n"
         f"Candidate Answer:\n{candidate_answer}\n\n"
-        "Score the response from 0.0 to 100.0 and decide difficulty adjustment ('easier', 'same', 'harder').\n"
+        "Instructions:\n"
+        "1. Score response (0.0 to 100.0).\n"
+        "2. Decide difficulty adjustment ('easier', 'same', 'harder').\n"
+        f"3. Did the candidate mention specific technologies (e.g. Redis, Kafka, Postgres, Caching, Docker), algorithms, or trade-offs?\n"
+        f"   If they did and we have not probed them yet (follow_ups_done={follow_ups_done}), suggest a 'probe_topic' to latch onto (e.g., 'why Redis was chosen and how cache invalidation works'). Otherwise set 'probe_topic' to null.\n"
         "Return pure JSON:\n"
-        '{"score": float, "feedback": string, "difficulty_adjustment": "easier" | "same" | "harder"}'
+        '{"score": float, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string | null}'
     )
 
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": "Evaluate response."}
+        {"role": "user", "content": "Evaluate candidate response and determine if probing follow-up is needed."}
     ]
 
     llm_res = await llm_service.call("evaluate_response", messages)
@@ -39,9 +45,11 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         cleaned_json = re.sub(r"^```json\s*", "", llm_res.strip())
         cleaned_json = re.sub(r"\s*```$", "", cleaned_json)
         eval_dict = json.loads(cleaned_json)
-        score = float(eval_dict.get("score", 70.0))
+        score = float(eval_dict.get("score", 75.0))
+        probe_topic = eval_dict.get("probe_topic")
     except Exception:
         score = 75.0
+        probe_topic = None
 
     # Route difficulty dynamically
     if score < 40.0:
@@ -51,17 +59,31 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
     else:
         new_difficulty = "medium"
 
-    next_idx = idx + 1
-    has_next = next_idx < len(questions)
-    next_phase = "interview" if has_next else "feedback"
-    next_round = questions[next_idx].get("round_type", "behavioral") if has_next else "done"
+    # Human Interviewer Latching Rule: If candidate mentioned an interesting tech/concept and hasn't been probed yet:
+    should_probe = bool(probe_topic and follow_ups_done == 0)
 
-    logger.info(f"Question {idx + 1} scored: {score}. Next difficulty: {new_difficulty}. Next phase: {next_phase}")
+    if should_probe:
+        next_idx = idx
+        next_follow_up_count = follow_ups_done + 1
+        active_topic = probe_topic
+        next_phase = "interview"
+        next_round = current_q.get("round_type", "behavioral")
+        logger.info(f"Human Interviewer Probing activated on question {idx + 1}: Latching onto '{probe_topic}'")
+    else:
+        next_idx = idx + 1
+        next_follow_up_count = 0
+        active_topic = None
+        has_next = next_idx < len(questions)
+        next_phase = "interview" if has_next else "feedback"
+        next_round = questions[next_idx].get("round_type", "behavioral") if has_next else "done"
+        logger.info(f"Question {idx + 1} scored: {score}. Next difficulty: {new_difficulty}. Next phase: {next_phase}")
 
     return {
         "current_score": score,
         "difficulty_level": new_difficulty,
         "current_question_idx": next_idx,
         "current_round": next_round,
+        "follow_up_count": next_follow_up_count,
+        "active_follow_up_topic": active_topic,
         "phase": next_phase
     }

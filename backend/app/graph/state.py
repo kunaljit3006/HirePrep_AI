@@ -29,6 +29,8 @@ class InterviewState(TypedDict):
     latest_interviewer_response: Optional[str]
     current_score: float
     difficulty_level: Literal["easy", "medium", "hard"]
+    follow_up_count: int  # Number of probing follow-ups asked on current question
+    active_follow_up_topic: Optional[str]  # e.g., "Redis caching choice", "time complexity trade-off"
 
     # Anti-Cheat & Camera Body Language Telemetry
     violations: List[Dict[str, Any]]
