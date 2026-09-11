@@ -37,6 +37,8 @@ class InterviewState(TypedDict):
     hint_tier: Optional[int]  # Tier level of the hint provided (1, 2, or 3)
     hint_count: int  # Number of hints provided on current question
     hints_given: List[str]  # History of hints provided to the candidate
+    is_approach_check: Optional[bool]  # True if candidate shared an in-progress thought/approach check
+    track_status: Optional[str]  # "on_track" | "partially_on_track" | "off_track"
 
     # Anti-Cheat, Camera Body Language & Speech Clarity Telemetry
     violations: List[Dict[str, Any]]

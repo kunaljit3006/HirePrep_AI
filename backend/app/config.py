@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["*"]
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(
+            os.path.join(os.path.dirname(__file__), "..", ".env"),
+            ".env",
+            "backend/.env"
+        ),
+        extra="ignore"
+    )
 
 settings = Settings()

@@ -246,11 +246,13 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
             data = json.loads(raw_data)
             msg_type = data.get("type")
 
-            # 1. Candidate speech / text response (answers, clarifying questions, or hint requests)
-            if msg_type in ["candidate_answer", "candidate_clarification", "candidate_hint_request"]:
+            # 1. Candidate speech / text response (answers, clarifying questions, hint requests, or approach checks)
+            if msg_type in ["candidate_answer", "candidate_clarification", "candidate_hint_request", "candidate_approach_check"]:
                 answer_text = data.get("content", "")
                 if msg_type == "candidate_hint_request" and not answer_text:
                     answer_text = "Could you please provide a hint on how to approach this?"
+                elif msg_type == "candidate_approach_check" and not answer_text:
+                    answer_text = "Am I on the right track with this approach?"
 
                 # Speech clarity & filler word telemetry
                 words = answer_text.lower().split()
@@ -314,6 +316,8 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                 curr_hints_given = step_result.get("hints_given", [])
                 is_clarification = bool(step_result.get("is_clarification"))
                 is_hint = bool(step_result.get("is_hint"))
+                is_approach_check = bool(step_result.get("is_approach_check"))
+                track_status = step_result.get("track_status", "on_track")
                 hint_tier = step_result.get("hint_tier", curr_hint_count)
 
                 # Check if interview complete
@@ -326,11 +330,16 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
 
                 # Deliver the dynamic, human AI interviewer speech
                 next_q = questions[curr_idx]
-                is_probe = bool(curr_active_probe) and not is_clarification and not is_hint
+                is_probe = bool(curr_active_probe) and not is_clarification and not is_hint and not is_approach_check
                 interviewer_speech = step_result.get("latest_interviewer_response")
 
                 if not interviewer_speech:
-                    if is_hint:
+                    if is_approach_check:
+                        interviewer_speech = (
+                            "Yes, exactly! You are on the right track with that approach. "
+                            "Go ahead and start implementing it!"
+                        )
+                    elif is_hint:
                         interviewer_speech = (
                             "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade space for O(1) lookups."
                         )
@@ -355,6 +364,8 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "content": interviewer_speech,
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
+                    "is_approach_check": is_approach_check,
+                    "track_status": track_status if is_approach_check else None,
                     "is_clarification": is_clarification,
                     "is_hint": is_hint,
                     "hint_tier": hint_tier if is_hint else None,
@@ -362,7 +373,9 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "timestamp": time.time()
                 })
 
-                if is_hint:
+                if is_approach_check:
+                    msg_response_type = "ai_affirmation"
+                elif is_hint:
                     msg_response_type = "ai_hint"
                 elif is_clarification:
                     msg_response_type = "ai_clarification"
@@ -377,6 +390,8 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "question_idx": curr_idx,
                     "question": next_q,
                     "content": interviewer_speech,
+                    "is_approach_check": is_approach_check,
+                    "track_status": track_status if is_approach_check else None,
                     "is_hint": is_hint,
                     "hint_tier": hint_tier if is_hint else None,
                     "is_clarification": is_clarification,

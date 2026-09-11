@@ -272,6 +272,23 @@ After completing an interview, the candidate is routed to `/feedback/[id]`. This
        "probed_topic": "multithreading synchronization and race conditions"
      }
      ```
+   - **Live Approach Verification & "Right Track" Affirmations**:
+     When a candidate thinks out loud, asks *"Am I on the right track?"*, or clicks an `[Am I on the Right Track?]` co-pilot button:
+     ```json
+     { "type": "candidate_approach_check", "content": "I am thinking of using a two-pointer approach starting from both ends to find the pair. Am I on the right track?" }
+     ```
+     The AI interviewer responds immediately as an attentive co-pilot, validating their direction:
+     ```json
+     {
+       "type": "ai_affirmation",
+       "content": "Yes, exactly! You are on the right track with that approach. That will give you optimal time and space efficiency. Go ahead and start implementing it!",
+       "is_approach_check": true,
+       "track_status": "on_track",
+       "round_type": "coding",
+       "question_idx": 0
+     }
+     ```
+     *(Frontend displays a positive green "On Track" badge, plays interviewer voice encouragement, and allows candidate to proceed without question disruption).*
 3. **Body Language Stream (Every 1 Second)**:
    - Client sends in-browser face mesh metrics:
      ```json

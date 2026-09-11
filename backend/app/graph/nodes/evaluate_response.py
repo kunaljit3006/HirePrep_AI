@@ -32,13 +32,27 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         "Instructions:\n"
         "Step 1: CLASSIFY CANDIDATE INTENT:\n"
         "Determine if the candidate is:\n"
-        "- 'clarification': Asking about approach, constraints, edge cases, scope, or methodology "
-        "(e.g. 'Should I write brute force first or optimal?', 'Do we need to write brute force first or direct optimal solution?', "
-        "'Are duplicates allowed?', 'Can we assume positive integers?', 'Should I write pseudocode or full code?').\n"
+        "- 'approach_check': Explicitly checking their direction, asking if they are on the right track, or proposing a tentative approach before implementing "
+        "(e.g. 'Am I on the right track with this approach?', 'I am thinking of using a two-pointer approach, would that work?', 'Would binary search work here?', 'Does this approach make sense?').\n"
+        "- 'clarification': Asking about constraints, edge cases, scope, brute force vs optimal requirements, or format "
+        "(e.g. 'Should I write brute force first or optimal?', 'Are duplicates allowed?', 'Can we assume positive integers?').\n"
         "- 'hint_request': Stuck, having difficulty, or asking for a hint or guidance "
         "(e.g. 'Can I get a hint?', 'I am stuck on how to optimize space', 'Could you give me a small pointer on how to approach this?').\n"
-        "- 'answer': Explaining their technical solution, writing code, or answering the problem.\n\n"
+        "- 'answer': Describing their technical design, explaining past implementations/technologies, writing code, or presenting their solution (e.g. 'To handle read traffic, we implemented Redis for caching so queries don't hit Postgres.').\n\n"
         "Step 2:\n"
+        "IF INTENT IS 'approach_check':\n"
+        "- Act like an attentive, encouraging human interviewer observing their thought process or whiteboard/code.\n"
+        "- Evaluate whether their proposed approach/intuition is sound and on the right track for this problem:\n"
+        "  * 'on_track': Their chosen algorithm/data structure/architecture directly leads to the optimal solution.\n"
+        "    Set 'track_status'='on_track'.\n"
+        "    Provide an affirming, enthusiastic verbal nudge in 'affirmation_content' (e.g., 'Yes, exactly! You\\'re on the right track with [technique]. That will give you optimal complexity. Go ahead and start implementing that!').\n"
+        "  * 'partially_on_track': Their approach works for a baseline or has the right intuition, but might hit a bottleneck or edge case.\n"
+        "    Set 'track_status'='partially_on_track'.\n"
+        "    Affirm their good intuition, then offer a gentle directional guidance in 'affirmation_content' (e.g., 'Good intuition on [X]! That gives a solid baseline. Before you write code, consider if [alternative/optimization] could get us to optimal complexity.').\n"
+        "  * 'off_track': Their approach introduces an anti-pattern or severe constraint violation.\n"
+        "    Set 'track_status'='off_track'.\n"
+        "    Politely steer them in 'affirmation_content' (e.g., 'Careful there—notice that [constraint/case]. Let\\'s take a step back and think about how [alternative concept] might apply.').\n"
+        "- Set score=null, feedback='Candidate verified approach/direction.', difficulty_adjustment='same', probe_topic=null.\n\n"
         f"IF INTENT IS 'hint_request' (Current Tier: {hint_count + 1}/3):\n"
         "- Act like a supportive, realistic human interviewer offering graduated guidance:\n"
         f"  * Tier 1 (hint_count=0): High-level intuition nudge pointing to the algorithmic pattern or data structure (e.g. Hash Map, Sliding Window, Min-Heap).\n"
@@ -59,10 +73,11 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         f"   Did the candidate mention ANY specific technical concepts, concurrency/OS principles (e.g. multithreading, mutex/locks, race conditions), "
         f"   architectures (e.g. caching, Redis, Kafka, microservices, sharding), or algorithms?\n"
         f"   - If they dropped a concept and we have not probed them yet (follow_ups_done={follow_ups_done} < 2), "
-        f"     provide a 'probe_topic' with the exact subject and angle to challenge them on.\n"
+        f"     PRIORITIZE probing on the exact technologies/concepts they explicitly mentioned in their answer (e.g. Redis, locks, sharding, Postgres) to test their depth of hands-on knowledge. "
+        f"     Provide a 'probe_topic' with the exact subject and angle to challenge them on.\n"
         f"   - Otherwise set 'probe_topic' to null.\n"
         "Return pure JSON:\n"
-        '{"intent": "clarification"|"hint_request"|"answer", "clarification_answer": string|null, "hint_content": string|null, "score": float|null, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string|null}'
+        '{"intent": "approach_check"|"clarification"|"hint_request"|"answer", "affirmation_content": string|null, "track_status": "on_track"|"partially_on_track"|"off_track"|null, "clarification_answer": string|null, "hint_content": string|null, "score": float|null, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string|null}'
     )
 
     messages = [
@@ -74,20 +89,60 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
 
     try:
         import re
-        cleaned_json = re.sub(r"^```json\s*", "", llm_res.strip())
+        # Strip reasoning models' <think>...</think> tags (e.g. Qwen / DeepSeek)
+        cleaned_json = re.sub(r"<think>.*?</think>", "", llm_res, flags=re.DOTALL).strip()
+        cleaned_json = re.sub(r"^```(?:json)?\s*", "", cleaned_json)
         cleaned_json = re.sub(r"\s*```$", "", cleaned_json)
+        # Extract outermost JSON object if surrounded by preamble
+        json_match = re.search(r"(\{.*\})", cleaned_json, re.DOTALL)
+        if json_match:
+            cleaned_json = json_match.group(1)
         eval_dict = json.loads(cleaned_json)
         intent = eval_dict.get("intent", "answer")
         clarification_answer = eval_dict.get("clarification_answer")
         hint_content = eval_dict.get("hint_content")
+        affirmation_content = eval_dict.get("affirmation_content")
+        track_status = eval_dict.get("track_status", "on_track")
         score = float(eval_dict.get("score")) if eval_dict.get("score") is not None else 75.0
         probe_topic = eval_dict.get("probe_topic")
     except Exception:
         intent = "answer"
         clarification_answer = None
         hint_content = None
+        affirmation_content = None
+        track_status = None
         score = 75.0
         probe_topic = None
+
+    # Handle Candidate In-Progress Approach Check / Right-Track Guidance
+    if intent == "approach_check" and affirmation_content:
+        logger.info(f"Candidate checked approach/direction on Question {idx + 1}. Track status: {track_status}")
+        transcript = list(state.get("transcript", []))
+        interviewer_msg = {
+            "role": "interviewer",
+            "content": affirmation_content,
+            "round_type": current_q.get("round_type", "general"),
+            "question_idx": idx,
+            "is_approach_check": True,
+            "track_status": track_status,
+            "timestamp": time.time()
+        }
+        transcript.append(interviewer_msg)
+        return {
+            "transcript": transcript,
+            "latest_interviewer_response": affirmation_content,
+            "is_approach_check": True,
+            "track_status": track_status,
+            "is_clarification": False,
+            "is_hint": False,
+            "hint_count": hint_count,
+            "hints_given": hints_given,
+            "current_question_idx": idx,
+            "current_round": current_q.get("round_type", "behavioral"),
+            "follow_up_count": follow_ups_done,
+            "active_follow_up_topic": None,
+            "phase": "awaiting_candidate"
+        }
 
     # Handle Candidate Hint Request
     if intent == "hint_request" and hint_content:

@@ -9,34 +9,34 @@ logger = logging.getLogger("hireprep.llm")
 # Model routing priority per agent
 AGENT_MODELS = {
     "resume_parser": [
-        "huggingface/google/gemma-4-12b",
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash"
+        "groq/openai/gpt-oss-20b",
+        "groq/qwen/qwen3.6-27b",
+        "gemini/gemini-2.5-flash"
     ],
     "profile_scraper": [
-        "huggingface/mistralai/Mistral-Small-3.2",
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash"
+        "groq/openai/gpt-oss-20b",
+        "groq/qwen/qwen3.6-27b",
+        "gemini/gemini-2.5-flash"
     ],
     "question_researcher": [
-        "openrouter/deepseek/deepseek-r1",
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash"
+        "groq/openai/gpt-oss-120b",
+        "groq/openai/gpt-oss-20b",
+        "gemini/gemini-2.5-flash"
     ],
     "interview_conductor": [
-        "groq/meta-llama/Llama-4-Scout",
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash"
+        "groq/openai/gpt-oss-20b",
+        "groq/qwen/qwen3.6-27b",
+        "gemini/gemini-2.5-flash"
     ],
     "evaluate_response": [
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash"
+        "groq/openai/gpt-oss-20b",
+        "groq/qwen/qwen3.6-27b",
+        "gemini/gemini-2.5-flash"
     ],
     "feedback_generator": [
-        "groq/Qwen/Qwen3-Coder",
-        "groq/llama-3.3-70b-versatile",
-        "gemini/gemini-2.0-flash",
-        "openrouter/deepseek/deepseek-r1"
+        "groq/openai/gpt-oss-120b",
+        "groq/openai/gpt-oss-20b",
+        "gemini/gemini-2.5-flash"
     ],
 }
 
@@ -260,6 +260,38 @@ class LLMService:
                     "hint_content": hint_msg,
                     "score": None,
                     "feedback": f"Candidate effectively leveraged a Tier {hint_tier} hint to proceed.",
+                    "difficulty_adjustment": "same",
+                    "probe_topic": None
+                })
+
+            # Check if candidate is verifying their thought process / approach ("right track" co-pilot)
+            is_approach_phrase = any(phrase in target_text for phrase in [
+                "right track", "thinking of using", "thinking about", "am i on the",
+                "approach is", "my plan is", "plan to use", "would it make sense to use",
+                "thinking of starting with", "heading in the right direction", "on the right path"
+            ])
+            if is_approach_phrase:
+                if any(w in target_text for w in ["two pointer", "two-pointer", "hash map", "hashmap", "hash table", "sliding window", "binary search", "queue", "redis"]):
+                    affirmation = (
+                        "Yes, exactly! You are on the right track with that approach. "
+                        "That will give you optimal time and space efficiency. Go ahead and start implementing it!"
+                    )
+                    status = "on_track"
+                else:
+                    affirmation = (
+                        "Yes, you are on a good track! The high-level intuition is sound. "
+                        "Go ahead and proceed, and keep edge cases in mind as you construct the logic."
+                    )
+                    status = "on_track"
+
+                return json.dumps({
+                    "intent": "approach_check",
+                    "affirmation_content": affirmation,
+                    "track_status": status,
+                    "clarification_answer": None,
+                    "hint_content": None,
+                    "score": None,
+                    "feedback": "Candidate proactively verified algorithmic intuition and approach with the interviewer.",
                     "difficulty_adjustment": "same",
                     "probe_topic": None
                 })
