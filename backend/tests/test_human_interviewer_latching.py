@@ -73,3 +73,63 @@ async def test_human_interviewer_latches_on_keywords():
     # Step 2: The interviewer node should now produce a targeted question probing Redis!
     interviewer_response = eval_state.get("latest_interviewer_response", "")
     assert "redis" in interviewer_response.lower() or "cache" in interviewer_response.lower()
+
+
+@pytest.mark.asyncio
+async def test_human_interviewer_latches_on_multithreading():
+    """
+    Verifies that the human interviewer does NOT only latch onto tools (like Redis/Kafka),
+    but latches onto ANY technical concept, OS principle, or concurrency paradigm
+    such as 'multithreading', 'race conditions', or 'locks'.
+    """
+    config = {"configurable": {"thread_id": "test-multithreading-probe-002"}}
+
+    state = {
+        "interview_id": "intv-thread-002",
+        "user_id": "candidate-002",
+        "resume_bytes": None,
+        "resume_filename": None,
+        "resume_data": None,
+        "detected_profile_links": None,
+        "scraped_profiles": None,
+        "company": "Google",
+        "role": "Backend Engineer",
+        "location": "India",
+        "duration_min": 30,
+        "questions": [
+            {
+                "id": "q1",
+                "round_type": "cs_fundamentals",
+                "topic": "Operating Systems & Concurrency",
+                "title": "Optimizing Batch Processing",
+                "description": "How would you speed up processing 10,000 files in memory?",
+                "expected_key_points": ["I/O vs CPU bound", "Worker pools", "Race conditions"]
+            }
+        ],
+        "current_question_idx": 0,
+        "current_round": "cs_fundamentals",
+        "transcript": [],
+        "latest_candidate_response": "I solved this by introducing multithreading with a thread pool to process items concurrently in memory.",
+        "latest_interviewer_response": None,
+        "current_score": 75.0,
+        "difficulty_level": "medium",
+        "follow_up_count": 0,
+        "active_follow_up_topic": None,
+        "violations": [],
+        "body_language_samples": [],
+        "code_submissions": [],
+        "phase": "evaluate",
+        "feedback_report": None
+    }
+
+    eval_state = await interview_graph.ainvoke(state, config=config)
+
+    # Asserts that the interviewer latched onto 'multithreading'
+    assert eval_state["current_question_idx"] == 0
+    assert eval_state["follow_up_count"] == 1
+    assert eval_state["active_follow_up_topic"] is not None
+    assert "thread" in eval_state["active_follow_up_topic"].lower() or "concurrency" in eval_state["active_follow_up_topic"].lower()
+
+    # Asserts that the spoken prompt directly challenges thread safety / synchronization
+    spoken_question = eval_state.get("latest_interviewer_response", "")
+    assert any(term in spoken_question.lower() for term in ["thread", "race", "synchronization", "concurrency"])

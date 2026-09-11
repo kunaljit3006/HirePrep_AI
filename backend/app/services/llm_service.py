@@ -209,19 +209,41 @@ class LLMService:
         elif agent_name == "interview_conductor":
             if "probing their mention of:" in all_content:
                 topic = all_content.split("probing their mention of:")[-1].strip().split("\n")[0]
-                return f"You mentioned {topic} in your explanation—could you tell me why you chose that specifically over alternatives, and how you handled potential failure modes or trade-offs?"
+                if any(w in topic.lower() for w in ["thread", "concurrency", "mutex", "lock", "race"]):
+                    return f"Got it. You brought up {topic} there—how did you prevent race conditions or handle synchronization when multiple threads write to shared memory?"
+                elif any(w in topic.lower() for w in ["redis", "caching", "cache"]):
+                    return f"Understood. You mentioned {topic}—why did you opt for Redis specifically over an in-memory cache, and how do you handle cache invalidation and stale reads?"
+                elif any(w in topic.lower() for w in ["kafka", "queue", "rabbitmq"]):
+                    return f"Makes sense. You mentioned {topic}—how do you ensure message delivery guarantees and prevent duplicate processing if a consumer fails?"
+                return f"Fair point. You mentioned {topic} in your explanation—could you walk me through why you chose that specifically over alternatives, and what trade-offs you considered?"
             return (
-                "Thank you for sharing that. I see from your resume that you built a distributed caching system using Python and Raft. "
-                "Could you walk me through the specific trade-offs you considered between consistency and latency when designing the replication protocol?"
+                "Thank you for sharing that. Let's move to our next section. "
+                "Could you walk me through your design approach, starting with the core data flow and key components?"
             )
 
         elif agent_name == "evaluate_response":
             probe = None
-            if any(w in all_content for w in ["redis", "caching", "cache", "kafka", "raft", "sharding", "postgres"]):
-                probe = "Redis and caching trade-offs"
+            candidate_text = ""
+            for m in messages:
+                content = m.get("content", "")
+                if "Candidate Answer:" in content:
+                    candidate_text = content.split("Candidate Answer:")[-1].split("Instructions:")[0].lower()
+                    break
+            target_text = candidate_text if candidate_text else all_content
+
+            if any(w in target_text for w in ["multithreading", "threading", "threads", "concurrency", "mutex", "lock", "race condition", "deadlock"]):
+                probe = "multithreading synchronization and race conditions"
+            elif any(w in target_text for w in ["redis", "caching", "cache", "memcached"]):
+                probe = "Redis caching strategy and cache invalidation"
+            elif any(w in target_text for w in ["kafka", "queue", "rabbitmq", "pubsub", "pub/sub"]):
+                probe = "Kafka messaging guarantees and consumer lag"
+            elif any(w in target_text for w in ["sharding", "replication", "partition", "indexing", "b-tree"]):
+                probe = "database sharding and indexing trade-offs"
+            elif any(w in target_text for w in ["microservices", "microservice", "docker", "kubernetes"]):
+                probe = "microservices decoupling and failure isolation"
             return json.dumps({
                 "score": 75.0,
-                "feedback": "Strong understanding of distributed systems trade-offs and CAP theorem.",
+                "feedback": "Demonstrates practical engineering perspective and awareness of systems trade-offs.",
                 "difficulty_adjustment": "same",
                 "probe_topic": probe
             })

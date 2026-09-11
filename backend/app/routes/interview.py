@@ -231,6 +231,9 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
             })
             await manager.send_json(interview_id, initial_msg)
 
+        curr_follow_up_count = 0
+        curr_active_probe = None
+
         # Main message loop
         while True:
             raw_data = await websocket.receive_text()
@@ -267,6 +270,8 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "latest_interviewer_response": None,
                     "current_score": 75.0,
                     "difficulty_level": "medium",
+                    "follow_up_count": curr_follow_up_count,
+                    "active_follow_up_topic": curr_active_probe,
                     "violations": session_violations,
                     "body_language_samples": session_body_samples,
                     "code_submissions": [],
@@ -277,38 +282,54 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                 thread_config = {"configurable": {"thread_id": interview_id}}
                 step_result = await interview_graph.ainvoke(graph_state, config=thread_config)
 
-                # Update index & difficulty
+                # Update index & difficulty & organic follow-up state
                 curr_idx = step_result.get("current_question_idx", curr_idx + 1)
                 new_difficulty = step_result.get("difficulty_level", "medium")
+                curr_follow_up_count = step_result.get("follow_up_count", 0)
+                curr_active_probe = step_result.get("active_follow_up_topic")
 
                 # Check if interview complete
-                if curr_idx >= len(questions):
+                if curr_idx >= len(questions) or step_result.get("phase") == "feedback":
                     await manager.send_json(interview_id, {
                         "type": "interview_completed",
                         "message": "You have completed all sections of the interview! Generating your detailed evaluation report..."
                     })
                     break
 
-                # Ask next question
+                # Deliver the dynamic, human AI interviewer speech
                 next_q = questions[curr_idx]
-                interviewer_prompt = (
-                    f"Great answer. Now let's move to our next section ({next_q.get('round_type').upper()}): "
-                    f"{next_q.get('description')}"
-                )
+                is_probe = bool(curr_active_probe)
+                interviewer_speech = step_result.get("latest_interviewer_response")
+
+                if not interviewer_speech:
+                    if is_probe:
+                        interviewer_speech = (
+                            f"Got it. You brought up {curr_active_probe} there—could you walk me through "
+                            "how that works under the hood and what trade-offs you weighed?"
+                        )
+                    else:
+                        interviewer_speech = (
+                            f"Understood. Let's move to our next section ({next_q.get('round_type').upper()}): "
+                            f"{next_q.get('description')}"
+                        )
+
                 session_transcript.append({
                     "role": "interviewer",
-                    "content": interviewer_prompt,
+                    "content": interviewer_speech,
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
+                    "is_follow_up": is_probe,
                     "timestamp": time.time()
                 })
 
                 await manager.send_json(interview_id, {
-                    "type": "ai_question",
+                    "type": "ai_follow_up" if is_probe else "ai_question",
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
                     "question": next_q,
-                    "content": interviewer_prompt,
+                    "content": interviewer_speech,
+                    "is_follow_up": is_probe,
+                    "probed_topic": curr_active_probe,
                     "difficulty": new_difficulty,
                     "timestamp": time.time()
                 })

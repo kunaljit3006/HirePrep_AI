@@ -27,8 +27,15 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         "Instructions:\n"
         "1. Score response (0.0 to 100.0).\n"
         "2. Decide difficulty adjustment ('easier', 'same', 'harder').\n"
-        f"3. Did the candidate mention specific technologies (e.g. Redis, Kafka, Postgres, Caching, Docker), algorithms, or trade-offs?\n"
-        f"   If they did and we have not probed them yet (follow_ups_done={follow_ups_done}), suggest a 'probe_topic' to latch onto (e.g., 'why Redis was chosen and how cache invalidation works'). Otherwise set 'probe_topic' to null.\n"
+        f"3. ACTIVE LISTENING & DEPTH PROBING:\n"
+        f"   Did the candidate mention ANY specific technical concepts, low-level OS/concurrency principles (e.g. multithreading, race conditions, mutex/locks, deadlocks, thread pools, async/event loop), "
+        f"   architectural patterns (e.g. microservices, event-driven, pub/sub, sharding, replication, caching, load balancing), "
+        f"   database internals (e.g. ACID, B-trees, indexing, isolation levels, connection pooling), "
+        f"   algorithms/data structures (e.g. sliding window, dynamic programming, tries, graph traversal), "
+        f"   or tools & infrastructure (e.g. Redis, Kafka, Docker, Kubernetes, Postgres, RabbitMQ)?\n"
+        f"   - If they dropped a concept, tool, or approach and we have not probed them yet (follow_ups_done={follow_ups_done} < 2), "
+        f"     provide a 'probe_topic' with the exact subject and angle to challenge them on (e.g., 'multithreading race conditions and synchronization', 'why Redis was chosen and cache invalidation strategy', 'Kafka message ordering and consumer lag').\n"
+        f"   - If their answer was already completely thorough or we already probed enough, set 'probe_topic' to null.\n"
         "Return pure JSON:\n"
         '{"score": float, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string | null}'
     )
@@ -59,8 +66,8 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
     else:
         new_difficulty = "medium"
 
-    # Human Interviewer Latching Rule: If candidate mentioned an interesting tech/concept and hasn't been probed yet:
-    should_probe = bool(probe_topic and follow_ups_done == 0)
+    # Human Interviewer Latching Rule: If candidate mentioned an interesting tech/concept and hasn't been probed enough (< 2 follow-ups):
+    should_probe = bool(probe_topic and follow_ups_done < 2)
 
     if should_probe:
         next_idx = idx
