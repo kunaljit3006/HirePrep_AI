@@ -1,4 +1,6 @@
-# 🚀 HirePrep_AI
+<p align="center">
+  <img src="./assets/banner.png" alt="HirePrep_AI" width="100%" />
+</p>
 
 > Autonomous Multi-Agent AI Mock Interview Platform powered by **FastAPI** and **LangGraph**.
 

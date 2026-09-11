@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/banner.png" alt="HirePrep_AI" width="100%" />
+</p>
+
 # HirePrep_AI Backend
 
 Autonomous Multi-Agent AI Mock Interview Platform Backend powered by **FastAPI** and **LangGraph**.
