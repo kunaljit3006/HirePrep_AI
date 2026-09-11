@@ -225,10 +225,33 @@ After completing an interview, the candidate is routed to `/feedback/[id]`. This
        "question": { "title": "...", "description": "..." }
      }
      ```
-2. **Candidate Answers**:
-   - Client sends speech-to-text or typed answer:
+2. **Candidate Answers & Clarifying Cross-Questions**:
+   - Client sends speech-to-text transcript or typed text:
      ```json
-     { "type": "candidate_answer", "content": "I approached this by..." }
+     { "type": "candidate_answer", "content": "I approached this by using multithreading..." }
+     ```
+   - **Cross-Questioning / Clarification Questions**: Candidates can ask clarifying questions at any time (e.g. *"Do we have to write the brute force first or direct optimal solution?"*, or *"Are duplicates allowed in the input?"*):
+     ```json
+     { "type": "candidate_clarification", "content": "Should I start with brute force or jump straight to the optimal approach?" }
+     ```
+   - **AI Interviewer Clarification Response**: The AI interviewer answers supportively, does NOT penalize or score, and keeps the question active:
+     ```json
+     {
+       "type": "ai_clarification",
+       "content": "Good question! Feel free to outline the brute force intuition briefly in 30 seconds so we are aligned on the baseline, but please implement the optimal solution directly in code. Go ahead whenever you are ready!",
+       "is_clarification": true,
+       "round_type": "coding",
+       "question_idx": 0
+     }
+     ```
+   - **AI Interviewer Concept Probing (Active Listening)**: When candidate drops a concept (Redis, multithreading, Kafka):
+     ```json
+     {
+       "type": "ai_follow_up",
+       "content": "Got it. You brought up multithreading there—how did you prevent race conditions or handle synchronization when multiple threads write to shared memory?",
+       "is_follow_up": true,
+       "probed_topic": "multithreading synchronization and race conditions"
+     }
      ```
 3. **Body Language Stream (Every 1 Second)**:
    - Client sends in-browser face mesh metrics:
