@@ -1,341 +1,270 @@
-# 💻 HirePrep_AI — Complete Frontend Developer Guide & Specifications
+# 💻 HirePrep_AI — Comprehensive Frontend Feature Guide & Architecture
 
-> **Audience**: Frontend Engineers building the Next.js client application for **HirePrep_AI**.  
-> **Backend Base URL**: `http://localhost:8000` (Local) / `https://api.hireprep.ai` (Production)  
-> **WebSocket URL**: `ws://localhost:8000/ws/interview/{interview_id}`
+> **Purpose**: This document provides a complete conceptual, behavioral, and architectural description of every feature the frontend developer needs to build for **HirePrep_AI**.
+>
+> **Core Philosophy**: HirePrep_AI is not a simple form or a generic chatbot. It is an **immersive, high-stakes technical interview simulator** that mirrors the pressure, proctoring, and depth of real interviews at companies like Google, Amazon, Microsoft, and Uber.
 
 ---
 
 ## 📑 Table of Contents
-1. [Tech Stack & Architecture](#-tech-stack--architecture)
-2. [Design System & Aesthetic Guidelines](#-design-system--aesthetic-guidelines)
-3. [Complete Page Directory & Routes](#-complete-page-directory--routes)
-4. [Detailed Page Specifications & Wireframes](#-detailed-page-specifications--wireframes)
-   - [Page 1: Landing Page (`/`)](#1-landing-page-)
-   - [Page 2: Candidate Dashboard (`/dashboard`)](#2-candidate-dashboard-dashboard)
-   - [Page 3: Interview Setup & Resume Upload (`/setup`)](#3-interview-setup--resume-upload-setup)
-   - [Page 4: Live 30-Min Interview Room (`/interview/[id]`)](#4-live-30-min-interview-room-interviewid)
-   - [Page 5: Holistic Feedback & Roadmap Report (`/feedback/[id]`)](#5-holistic-feedback--roadmap-report-feedbackid)
-   - [Page 6: Community Leaderboard (`/leaderboard`)](#6-community-leaderboard-leaderboard)
-5. [Core Client-Side Engine Specifications](#-core-client-side-engine-specifications)
-   - [Engine A: Mandatory Camera & TensorFlow.js Face Mesh](#engine-a-mandatory-camera--tensorflowjs-face-mesh)
-   - [Engine B: Monaco Code Editor with Anti-Cheat System](#engine-b-monaco-code-editor-with-anti-cheat-system)
-   - [Engine C: Web Speech API (Voice STT & TTS)](#engine-c-web-speech-api-voice-stt--tts)
-   - [Engine D: Real-Time WebSocket Protocol](#engine-d-real-time-websocket-protocol)
-6. [Backend API Integration Contract](#-backend-api-integration-contract)
+1. [System Architecture: Frontend vs Backend Division of Labor](#1-system-architecture-frontend-vs-backend-division-of-labor)
+2. [Feature 1: The Camera Vision & Body Language Engine](#feature-1-the-camera-vision--body-language-engine)
+3. [Feature 2: The Proctored Anti-Cheat Code Editor](#feature-2-the-proctored-anti-cheat-code-editor)
+4. [Feature 3: The Voice & Speech Processing Engine](#feature-3-the-voice--speech-processing-engine)
+5. [Feature 4: The 3-Panel Live Interview Room](#feature-4-the-3-panel-live-interview-room)
+6. [Feature 5: Resume Parsing & Job Targeting Onboarding](#feature-5-resume-parsing--job-targeting-onboarding)
+7. [Feature 6: Candidate Analytics Dashboard](#feature-6-candidate-analytics-dashboard)
+8. [Feature 7: Holistic Feedback Report & 14-Day Study Roadmap](#feature-7-holistic-feedback-report--14-day-study-roadmap)
+9. [Feature 8: Real-Time WebSocket Communication Protocol](#feature-8-real-time-websocket-communication-protocol)
+10. [Design System & Aesthetic Standards](#design-system--aesthetic-standards)
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 1. System Architecture: Frontend vs Backend Division of Labor
 
-| Layer | Technology | Details |
-|---|---|---|
-| **Framework** | **Next.js 15+ (App Router)** | Modern React Server Components + Client Components where interactive |
-| **Styling** | **Vanilla CSS + Custom Properties** | Design tokens, glassmorphism, dynamic gradients, smooth micro-animations |
-| **Code Editor** | **`@monaco-editor/react`** | Proctored VS Code editor with disabled shortcuts & paste listeners |
-| **Computer Vision** | **`@tensorflow/tfjs` & `@tensorflow-models/face-landmarks-detection`** | 468 facial mesh landmarks running 100% in-browser on client GPU |
-| **Voice Processing** | **Web Speech API** | `SpeechRecognition` (voice input) + `SpeechSynthesis` (AI interviewer voice) |
-| **Real-time Comms** | **Native WebSocket API** | Bidirectional event streaming for transcript, audio, code & telemetry |
-
----
-
-## 🎨 Design System & Aesthetic Guidelines
-
-### Color Palette (Tokens)
-```css
-:root {
-  --bg-primary: #0a0d14;         /* Deep void black */
-  --bg-secondary: #121824;       /* Card background */
-  --bg-elevated: #1a2233;        /* Dropdowns, modals */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(16, 185, 129, 0.3);
-
-  /* Brand Colors */
-  --brand-green: #00ea88;        /* HirePrep bright green accent */
-  --brand-green-glow: rgba(0, 234, 136, 0.15);
-  --accent-purple: #7928ca;      /* AI / reasoning highlights */
-  --accent-blue: #0070f3;        /* System highlights */
-  --accent-amber: #f5a623;       /* Warning / timer */
-  --accent-red: #ff0080;         /* Violations / alerts */
-
-  /* Typography */
-  --font-display: 'Outfit', 'Inter', -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-}
-```
-
-### Aesthetic Standards
-* **Visual Wow-Factor**: Deep dark theme with glassmorphic cards (`backdrop-filter: blur(12px)`), subtle neon borders, and smooth hover micro-interactions.
-* **Zero Jitter**: Video feeds, audio visualizers, and code editor must maintain consistent layout dimensions without jumping during dynamic text updates.
-
----
-
-## 📂 Complete Page Directory & Routes
+To achieve **sub-second latency**, **100% candidate privacy**, and **zero server GPU costs ($0)**, the application uses an intelligent hybrid design:
 
 ```
-frontend/
-├── app/
-│   ├── layout.js                 # Global HTML, Navbar, Footer, Providers
-│   ├── page.js                   # Landing Page (/)
-│   ├── dashboard/page.js         # Candidate Dashboard (/dashboard)
-│   ├── setup/page.js             # Resume Upload & Job Targeting (/setup)
-│   ├── interview/[id]/page.js    # Live Proctored Interview Room (/interview/[id])
-│   ├── feedback/[id]/page.js     # Comprehensive Feedback Report (/feedback/[id])
-│   └── leaderboard/page.js       # Opt-in Global Leaderboard (/leaderboard)
-├── components/
-│   ├── ui/                       # Buttons, Cards, Badges, Modals, Sliders
-│   ├── interview/                # CameraStream, AudioWaveform, MonacoAntiCheat, TranscriptFeed
-│   ├── feedback/                 # ScoreGauge, RadarChart, RoadmapTimeline, IntegrityCard
-│   └── layout/                   # Header, Sidebar, Footer
-├── hooks/
-│   ├── useFaceMesh.js            # TensorFlow.js camera body language tracker
-│   ├── useSpeechEngine.js        # SpeechRecognition (STT) + SpeechSynthesis (TTS)
-│   ├── useAntiCheat.js           # Monaco anti-paste, blur, devtools blocker
-│   └── useInterviewSocket.js     # WebSocket connection manager
-└── styles/
-    └── globals.css               # Global tokens, typography, utilities
++-----------------------------------------------------------------------------------+
+| FRONTEND (Runs in Candidate's Browser)                                             |
+|                                                                                   |
+|  [Webcam Feed] ──► [TensorFlow.js Face Mesh] ──► Computes Eye Contact & Confidence |
+|  [Microphone]  ──► [Web Speech API]          ──► Speech-to-Text Transcriptions    |
+|  [Keyboard]    ──► [Monaco Editor Listener]  ──► Blocks Paste & Logs Tab Switches |
+|                                                                                   |
+|  All heavy computer vision & audio runs locally on the candidate's GPU/CPU.       |
+|  Video and audio streams are NEVER uploaded to any server.                         |
++-----------------------------------------------------------------------------------+
+                                         │
+                                         ▼ (Lightweight JSON telemetry via WebSocket)
++-----------------------------------------------------------------------------------+
+| BACKEND (FastAPI + LangGraph)                                                     |
+|                                                                                   |
+|  - Agent 1: Parses Resumes & Detects Profiles                                     |
+|  - Agent 2: Scrapes GitHub Codebases & LeetCode Stats                             |
+|  - Agent 3: Researches Questions from Reddit, LeetCode Discuss, & HackerNews      |
+|  - Agent 4: Orchestrates Interview Turns & Adaptive Difficulty Routing            |
+|  - Agent 5: Correlates Camera Telemetry with Transcript to Generate Reports       |
++-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 📄 Detailed Page Specifications & Wireframes
+## Feature 1: The Camera Vision & Body Language Engine
 
-### 1. Landing Page (`/`)
-* **Hero Section**:
-  - Catchy title with gradient typography: *"Master Your Next Technical Interview with Autonomous AI"*.
-  - Dual action buttons: `[Start Free Mock Interview]` (primary green glow) and `[View Sample Report]`.
-  - Live animated preview of the 3-panel interview room (Face mesh tracking + Voice waveform + Monaco editor).
-* **Company Badges Ribbon**: Google, Amazon, Microsoft, Uber, Meta, Netflix.
-* **Core Value Pillars**:
-  1. *Resume-Tailored Deep Dives* — Questions on your actual projects & codebase decisions.
-  2. *Live Computer Vision Telemetry* — In-browser eye contact & confidence feedback.
-  3. *Proctored Anti-Cheat Editor* — Simulates real coding screen restrictions.
-  4. *Targeted Question Intelligence* — Scrapes Reddit & LeetCode Discuss for your exact target company.
-* **Interactive Demo**: Try a 60-second AI interviewer voice question directly on the landing page.
+### What is this feature?
+In a real technical interview, hiring managers evaluate more than just code syntax—they assess **eye contact, confidence under pressure, nervous fidgeting, and overall poise**. 
 
----
+The camera is **MANDATORY** in HirePrep_AI. The interview will not begin unless camera access is granted.
 
-### 2. Candidate Dashboard (`/dashboard`)
-* **Welcome Header**: Candidate profile summary, total interviews taken, current average score.
-* **Readiness Radar Chart**: DSA, System Design, Behavioral, Communication, Body Language.
-* **Past Interviews Table**:
-  - Columns: Target Company, Role, Date, Score & Grade (`A+`, `B`), Status, Action `[View Detailed Feedback]`.
-* **Action Card**: `[Schedule / Start New Mock Interview]` (prominent CTA button leading to `/setup`).
+### Is this Frontend or Backend?
+* **Video Capture & Neural Network Inference**: **100% FRONTEND**.
+* **Scoring & Correlation**: **BACKEND**.
 
----
+### How does it work scientifically?
+Using **MediaPipe Face Mesh (via TensorFlow.js)** running inside the browser, the frontend maps **468 3D geometric facial landmarks** across every video frame:
 
-### 3. Interview Setup & Resume Upload (`/setup`)
-* **Step 1: Resume Upload**:
-  - Drag-and-drop zone accepting `.pdf` and `.docx`.
-  - Client sends file to `POST /api/resume/upload`.
-  - Displays instant extracted breakdown:
-    - Candidate Name & Title
-    - Categorized Skills pills
-    - Detected Profile Badges (GitHub, LeetCode, Codeforces, Kaggle)
-* **Step 2: Target Interview Configuration**:
-  - **Company**: Auto-complete input (Google, Amazon, Microsoft, Startup, etc.).
-  - **Role**: SDE-1, SDE-2, Fullstack, Frontend, Backend, Machine Learning Engineer.
-  - **Location**: Default "India" (or dropdown for US, Europe, Remote).
-  - **Difficulty**: Easy, Medium, Hard.
-  - **Duration**: 30 Minutes.
-* **Step 3: Device & Camera Verification (MANDATORY)**:
-  - Video preview verifying camera permission.
-  - Microphone test bar with animated audio level visualizer.
-  - Start button remains **disabled** until both camera and mic are granted!
+1. **Eye Contact Analysis**:
+   - The model tracks the 3D iris center landmarks (`468`, `473`) relative to the inner and outer eye corners (`33`, `133`, `362`, `263`).
+   - If the candidate looks directly at the interviewer on screen or into the webcam, the gaze ratio is centered (score: **90% - 100%**).
+   - If the candidate looks down at cheat notes or glances sideways at a second monitor, the ratio deviates significantly (score drops to **30% - 50%**).
+2. **Confidence & Composure Score**:
+   - **Brow Furrowing**: Tracks the distance between eyebrow landmarks (`70` and `300`). Furrowed brows indicate stress or uncertainty.
+   - **Mouth Tension**: Distinguishes relaxed speech from nervous lip-compression or jaw-clenching.
+   - **Blink Rate**: Measures blinks per minute (normal speech: 15–20/min; rapid blinking >40/min indicates anxiety spikes).
+3. **Head Stability & Poise**:
+   - Calculates 3D head pitch, yaw, and roll using the vector between the nose tip (`1`) and chin (`152`).
+   - Distinguishes confident, upright posture from nervous head-swaying or slouching.
+4. **Anti-Cheat Presence Detection**:
+   - Confirms that **exactly one person** is in the frame. If the candidate ducks away, or if a second face appears, a violation is recorded.
+
+### The Real-Time HUD (Heads-Up Display)
+During the interview, the candidate sees their own webcam feed in a sleek glassmorphic overlay displaying a live **Eye Contact Meter (e.g. 92%)** and a **Confidence Pulse Indicator** that turns green when composed and amber when looking away for prolonged periods.
 
 ---
 
-### 4. Live 30-Min Interview Room (`/interview/[id]`)
+## Feature 2: The Proctored Anti-Cheat Code Editor
 
-This is the central experience. The page layout is a **3-panel responsive workspace**:
+### What is this feature?
+Top tech interviews do not allow candidates to copy-paste solutions from ChatGPT, StackOverflow, or external IDEs. When the coding round begins, an integrated **Monaco Editor** (the engine behind VS Code) opens with built-in proctoring restrictions.
 
-```
-+------------------------------------------------------------------------------------+
-| TOP BAR: Target: Google (SDE-2) | Round: CODING | Timer: 24:18 | [End Interview]   |
-+----------------------------------+-------------------------------------------------+
-| LEFT PANEL (40% width)           | RIGHT PANEL (60% width)                         |
-|                                  |                                                 |
-| 1. AI Interviewer Avatar         | [Tab: Monaco Code Editor]  [Tab: Whiteboard]    |
-|    - Animated speech wave        |                                                 |
-|    - Audio TTS speech active     | // Anti-Cheat Active: Copy/Paste Blocked        |
-|                                  | class Solution:                                 |
-| 2. Candidate Video Stream (HUD)  |     def lengthOfLongestSubstring(s: str):       |
-|    - Live Eye Contact Meter: 91% |         # Write solution here                   |
-|    - Confidence Gauge: 84%       |                                                 |
-|    - Posture indicator           |                                                 |
-|                                  |                                                 |
-| 3. Live Dialogue Transcript      |                                                 |
-|    - AI: "Can you explain O(N)?" | ----------------------------------------------- |
-|    - Candidate: (Live STT text)  | Test Cases Panel: [Test 1: PASSED] [Test 2: ...] |
-|    - [Mute Mic] [Push to Talk]   | Buttons: [Run Code]  [Submit Final Solution]    |
-+----------------------------------+-------------------------------------------------+
-```
-
-#### Key Interactions:
-1. **Camera Feed**:
-   - Camera **must remain on**. If user covers or turns off camera, an alert displays: *"Camera is mandatory for interview proctoring"*.
-   - TensorFlow.js computes face landmarks every 1 second and sends `body_language_sample` via WebSocket.
-2. **Anti-Cheat Monaco Editor**:
-   - `Ctrl+C`, `Ctrl+V`, `Ctrl+X`, and right-click paste are intercepted, blocked, and logged.
-   - When candidate leaves the browser tab (`document.visibilitychange`), a warning banner pops up and a violation event is transmitted.
-   - Clicking `[Run Code]` calls `POST /api/interview/{id}/code` and renders test assertions below.
-3. **Voice Dialogue**:
-   - Web Speech API listens continuously when mic is on.
-   - Finished phrases are sent as `candidate_answer` via WebSocket.
-   - When AI interviewer streams text, `window.speechSynthesis` speaks the question naturally.
+### How does it behave?
+1. **Copy-Paste Disabled**:
+   - Intercepts `Ctrl+C`, `Ctrl+V`, `Ctrl+X` (and `Cmd` variants on Mac).
+   - Right-click context menus are completely disabled within the editor.
+   - Attempting to paste triggers an immediate, polite warning banner: *"Clipboard paste is disabled during proctored coding rounds."*
+2. **Tab-Switch & Blur Detection**:
+   - Listens to `document.visibilitychange` and `window.onblur`.
+   - If the candidate switches tabs or minimizes the browser to check an answer, the frontend instantly logs a `tab_switch` violation with a precise timestamp.
+3. **DevTools Blocking**:
+   - Intercepts `F12`, `Ctrl+Shift+I`, and `Ctrl+Shift+J` to prevent inspecting web elements or network requests.
+4. **In-Browser Code Execution**:
+   - The candidate can run code in **Python** or **JavaScript**.
+   - Clicking `[Run Code]` submits the code to the backend sandbox (`/api/interview/{id}/code`), which executes test cases (both visible and hidden) and returns output, execution time (in ms), and test assertions without system imports.
 
 ---
 
-### 5. Holistic Feedback & Roadmap Report (`/feedback/[id]`)
-* **Hero Score Badge**:
-  - Circular animated progress ring: Overall Score (e.g. `86 / 100`).
-  - Letter Grade pill (`A`), Hire Recommendation badge (`Strong Hire` - green).
-* **Multi-Tab Breakdown**:
-  - **Tab 1: Section Scores**: Bar breakdown for DSA (85%), System Design (82%), Resume Projects (90%), Behavioral (84%).
-  - **Tab 2: Camera & Body Language**: Average eye contact percentage, confidence score, posture stability, fidgeting analysis.
-  - **Tab 3: Anti-Cheat & Integrity**: Proctoring score (100% minus deductions), list of any tab-switch or paste events.
-  - **Tab 4: Technical Transcript**: Full dialogue annotated with AI interviewer evaluations and follow-up rationales.
-* **14-Day Personalized Roadmap**:
-  - Day-by-day interactive timeline (Day 1 to Day 14).
-  - Target topics, specific actionable exercises, and direct link cards to NeetCode / LeetCode / ByteByteGo resources.
-* **Export Action**: `[Download PDF Report]` and `[Share Feedback Link]`.
+## Feature 3: The Voice & Speech Processing Engine
+
+### What is this feature?
+To make mock interviews feel real, candidates can speak their answers naturally rather than typing everything into a chat box.
+
+### How does it behave?
+1. **Speech-to-Text (STT)**:
+   - Uses the browser-native `SpeechRecognition` API.
+   - While the candidate speaks, live interim text appears in their input bubble.
+   - When the candidate pauses or clicks `[Done Answering]`, the final transcript is sent to the backend.
+2. **Text-to-Speech (TTS)**:
+   - When the AI interviewer asks a question or follow-up, `window.speechSynthesis` speaks the question aloud using a natural, professional tone.
+   - An interactive **Audio Waveform Visualizer** animates on the AI interviewer's avatar while the AI is speaking.
+3. **Mute & Push-to-Talk Controls**:
+   - Candidates can mute their microphone or switch to text chat at any time if they are in a noisy environment.
 
 ---
 
-### 6. Community Leaderboard (`/leaderboard`)
-* Candidate opt-in ranking based on mock interview scores.
-* Filter by target company (Google, Amazon, Microsoft) and role (SDE-1, SDE-2).
-* Shows user handle/avatar, target company, overall score, and badge.
+## Feature 4: The 3-Panel Live Interview Room
+
+### What is this feature?
+The main interview workspace where the candidate spends the 30-minute session.
+
+### The 3-Panel Layout:
+* **Panel 1 (Top Navigation Bar)**:
+  - Shows Target Company logo, Candidate Role (e.g. `Google — SDE-2`), Current Round indicator (`Coding`, `Behavioral`, or `System Design`), and a countdown timer (`28:45`).
+* **Panel 2 (Left Column — Interviewer & Video HUD)**:
+  - **AI Interviewer Card**: Avatar with animated speech waveform, showing the current question text.
+  - **Candidate Video Card**: Live webcam feed showing the eye-contact meter and confidence badge.
+  - **Live Transcript Card**: Scrollable chronological dialogue history between interviewer and candidate.
+* **Panel 3 (Right Column — Interactive Workspace)**:
+  - **Monaco Code Editor**: Opens during coding rounds with syntax highlighting, line numbers, and theme toggling.
+  - **Test Case Runner**: Renders test case inputs, expected outputs, and actual results with green/red status tags.
+  - **Architecture Whiteboard (Optional Tab)**: For system design rounds, provides a simple canvas to sketch components.
 
 ---
 
-## 🧠 Core Client-Side Engine Specifications
+## Feature 5: Resume Parsing & Job Targeting Onboarding
 
-### Engine A: Mandatory Camera & TensorFlow.js Face Mesh
-* **Packages**:
-  ```bash
-  npm install @tensorflow/tfjs @tensorflow-models/face-landmarks-detection
-  ```
-* **Hook Implementation (`hooks/useFaceMesh.js`)**:
-  - Load model: `faceLandmarksDetection.createDetector(faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh)`
-  - Periodically analyze webcam frame:
-    - **Eye Contact %**: Calculate horizontal and vertical gaze ratio between iris landmarks (468, 473) and eye corner landmarks (33, 133). If centered within threshold -> 100%, if looking away -> < 50%.
-    - **Confidence Score**: Computed from smile/neutral mouth landmark ratio and brow tension.
-    - **Head Stability**: Track variance of nose tip landmark (landmark 1) over time.
-  - Emit JSON sample every 1000ms:
-    ```json
-    {
-      "type": "body_language_sample",
-      "eye_contact_score": 88.5,
-      "confidence_score": 82.0,
-      "head_stability_score": 91.0,
-      "face_in_frame": true,
-      "timestamp": 1726071800.12
-    }
-    ```
+### What is this feature?
+The setup flow where candidates configure their interview before entering the room.
+
+### How does it behave?
+1. **Interactive File Uploader**:
+   - Drag-and-drop zone for `.pdf` and `.docx` resumes.
+   - Instantly uploads to `POST /api/resume/upload`.
+   - Renders a real-time extraction preview showing candidate name, extracted skills pills (Languages, Frameworks, Cloud), and detected coding profiles (GitHub, LeetCode, Codeforces, Kaggle).
+2. **Interview Customizer**:
+   - **Company**: Searchable dropdown (e.g., Google, Amazon, Microsoft, Meta, Netflix, Uber, or Custom Startup).
+   - **Role**: SDE-1, SDE-2, Fullstack, Frontend, Backend, Machine Learning.
+   - **Location**: India, US, Europe, Remote.
+   - **Difficulty**: Easy, Medium, Hard.
+3. **Hardware Readiness Check (Gatekeeper)**:
+   - Verifies webcam stream and microphone input levels.
+   - Displays a green checkmark when both devices are operational. The `[Enter Interview Room]` button remains disabled until hardware is validated.
 
 ---
 
-### Engine B: Monaco Code Editor with Anti-Cheat System
-* **Package**: `@monaco-editor/react`
-* **Anti-Cheat Rules (`hooks/useAntiCheat.js`)**:
-  ```javascript
-  // 1. Intercept Copy / Paste in Monaco Editor
-  editor.onKeyDown((e) => {
-    // Intercept Ctrl+V, Ctrl+C, Ctrl+X, Cmd+V, Cmd+C
-    if ((e.ctrlKey || e.metaKey) && ['KeyV', 'KeyC', 'KeyX'].includes(e.code)) {
-      e.preventDefault();
-      e.stopPropagation();
-      logAndSendViolation("copy_paste_attempt", "Blocked clipboard shortcut inside code editor");
-    }
-  });
+## Feature 6: Candidate Analytics Dashboard
 
-  // 2. Intercept context menu (right click)
-  editor.onContextMenu((e) => {
-    e.event.preventDefault();
-  });
+### What is this feature?
+The candidate's personal preparation command center (`/dashboard`).
 
-  // 3. Tab-switch / Window Blur Detection
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      logAndSendViolation("tab_switch", "Candidate left interview browser tab");
-    }
-  });
-
-  window.addEventListener("blur", () => {
-    logAndSendViolation("window_blur", "Candidate switched focus away from interview window");
-  });
-
-  // 4. Block DevTools Shortcuts
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "F12" || ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase()))) {
-      e.preventDefault();
-      logAndSendViolation("devtools_attempt", "Attempted to inspect browser elements");
-    }
-  });
-  ```
+### Key Elements:
+* **Readiness Radar Chart**: Visualizes performance across 5 key competencies:
+  - *Data Structures & Algorithms*
+  - *System Design & Scalability*
+  - *Behavioral & Leadership*
+  - *Communication Quality*
+  - *Body Language & Eye Contact*
+* **Interview History Feed**:
+  - Cards for every past interview showing company logo, score (`88 / 100`), grade (`A`), date, and a direct `[View Feedback]` link.
+* **Preparation Streaks & Stats**:
+  - Total interview hours logged, questions answered, and integrity score average.
 
 ---
 
-### Engine C: Web Speech API (Voice STT & TTS)
-* **Speech-to-Text (`SpeechRecognition`)**:
-  - Initializes `window.SpeechRecognition || window.webkitSpeechRecognition`.
-  - Sets `continuous = true` and `interimResults = true`.
-  - On final result, appends to transcript and sends `{ type: "candidate_answer", content: text }`.
-* **Text-to-Speech (`SpeechSynthesis`)**:
-  - When `{ type: "ai_question" }` arrives over WebSocket, call:
-    ```javascript
-    const utterance = new SpeechSynthesisUtterance(data.content);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
-    ```
+## Feature 7: Holistic Feedback Report & 14-Day Study Roadmap
+
+### What is this feature?
+After completing an interview, the candidate is routed to `/feedback/[id]`. This is not just a score—it is an actionable, comprehensive diagnostic report.
+
+### Key Elements:
+1. **Overall Grade & Hire Recommendation**:
+   - Score circular gauge (0 to 100).
+   - Big Letter Grade badge (`A+`, `A`, `B+`, `B`, `C`, `D`, `F`).
+   - Official hiring committee status: **"Strong Hire"**, **"Hire"**, **"Leaning Hire"**, or **"No Hire"**.
+2. **Per-Section Score Breakdown**:
+   - Individual score bars for Coding, System Design, Resume Deep-Dive, and Behavioral.
+   - Expandable accordions detailing specific strengths and weaknesses for each round.
+3. **Camera & Body Language Report**:
+   - Average Eye Contact percentage.
+   - Confidence score and posture stability rating.
+   - Behavioral notes (e.g. *"Maintained steady eye contact; composure remained solid under tough follow-up questions"*).
+4. **Proctoring Integrity Report**:
+   - Integrity score starting at 100 with clear accounting of any tab-switches or paste attempts.
+5. **Personalized 14-Day Interactive Study Roadmap**:
+   - A day-by-day interactive study guide (Day 1 through Day 14).
+   - Tailored specifically to the candidate's weak areas identified during the interview.
+   - Each day contains actionable goals and direct links to NeetCode, LeetCode, and ByteByteGo guides.
 
 ---
 
-### Engine D: Real-Time WebSocket Protocol
-* **Connect**: `ws://localhost:8000/ws/interview/{interview_id}`
-* **Messages Sent by Client to Server**:
-  1. `candidate_answer`: `{"type": "candidate_answer", "content": "..."}`
-  2. `body_language_sample`: `{"type": "body_language_sample", "eye_contact_score": 85.0, ...}`
-  3. `proctoring_violation`: `{"type": "proctoring_violation", "violation_type": "tab_switch", ...}`
-* **Messages Received by Client from Server**:
-  1. `ai_question`:
+## Feature 8: Real-Time WebSocket Communication Protocol
+
+### Connection:
+`ws://localhost:8000/ws/interview/{interview_id}`
+
+### Message Flows:
+1. **Interview Start**:
+   - Server immediately pushes the first AI greeting and question:
      ```json
      {
        "type": "ai_question",
-       "round_type": "coding",
-       "question_idx": 1,
-       "content": "Given a string s, find the longest substring...",
+       "round_type": "behavioral",
+       "question_idx": 0,
+       "content": "Welcome to your Google mock interview! Let's begin...",
        "difficulty": "medium",
-       "question": { "title": "...", "starter_code": { "python": "..." }, "test_cases": [...] }
+       "question": { "title": "...", "description": "..." }
      }
      ```
-  2. `proctoring_warning`: `{"type": "proctoring_warning", "message": "Integrity alert: tab_switch recorded."}`
-  3. `interview_completed`: `{"type": "interview_completed", "message": "Interview finished! Generating report..."}`
+2. **Candidate Answers**:
+   - Client sends speech-to-text or typed answer:
+     ```json
+     { "type": "candidate_answer", "content": "I approached this by..." }
+     ```
+3. **Body Language Stream (Every 1 Second)**:
+   - Client sends in-browser face mesh metrics:
+     ```json
+     {
+       "type": "body_language_sample",
+       "eye_contact_score": 89.2,
+       "confidence_score": 84.0,
+       "head_stability_score": 92.5,
+       "face_in_frame": true
+     }
+     ```
+4. **Anti-Cheat Alerts**:
+   - Client detects paste attempt or tab switch and sends:
+     ```json
+     { "type": "proctoring_violation", "violation_type": "tab_switch" }
+     ```
+   - Server returns instant warning notification to candidate:
+     ```json
+     { "type": "proctoring_warning", "message": "Tab switch recorded in proctoring report." }
+     ```
+5. **Session Finished**:
+   - When all rounds conclude, server emits:
+     ```json
+     { "type": "interview_completed", "message": "Generating your diagnostic report..." }
+     ```
+   - Client automatically redirects to `/feedback/[id]`.
 
 ---
 
-## 🔗 Backend API Integration Contract
+## Design System & Aesthetic Standards
 
-| Method | Endpoint | Description | Request Body / Form | Response |
-|---|---|---|---|---|
-| `POST` | `/api/resume/upload` | Upload PDF/DOCX resume | `multipart/form-data` (`file`) | `ResumeParseResponse` |
-| `GET` | `/api/resume/{id}` | Get parsed resume details | None | `ResumeParseResponse` |
-| `POST` | `/api/profile/scrape-from-resume/{id}` | Scrapes mentioned profiles | None | `ScrapedProfilesData` |
-| `POST` | `/api/question/generate` | Generate targeted question bank | `QuestionBankRequest` | `QuestionBankResponse` |
-| `POST` | `/api/interview/start` | Start 30-min interview session | `CreateInterviewRequest` | `InterviewSessionResponse` |
-| `GET` | `/api/interview/{id}` | Fetch session & question bank | None | `InterviewSessionResponse` |
-| `POST` | `/api/interview/{id}/code` | Safe AST code runner | `CodeSubmissionRequest` | `CodeSubmissionResult` |
-| `GET` | `/api/feedback/{id}` | Get finalized feedback report | None | `FeedbackReportResponse` |
-| `GET` | `/api/feedback/user/history` | Get past interviews for user | None | `List[FeedbackReportResponse]` |
-
----
-
-## 🎯 Verification Checklist for the Frontend Developer
-- [ ] Next.js 15 App Router structure configured.
-- [ ] Camera stream renders with active eye-contact & confidence HUD via TensorFlow.js.
-- [ ] Monaco Code Editor disables copy/paste and detects tab switches.
-- [ ] Web Speech API enables hands-free voice interviews with audio waveform animation.
-- [ ] WebSocket streams questions, answers, and telemetry in real time.
-- [ ] Feedback page visualizes all scores, proctoring metrics, and the 14-day study roadmap.
+* **Dark Theme Default**: Deep space black (`#0a0d14`) with dark slate cards (`#121824`).
+* **Accents**: High-visibility HirePrep green (`#00ea88`) for positive actions and scores; electric purple (`#7928ca`) for AI activity; neon pink (`#ff0080`) for proctoring violations.
+* **Micro-Animations**:
+  - Smooth scale transitions on card hovers.
+  - Fluid audio visualizer ripples.
+  - Pulsing status dots (`Live Recording`, `AI Speaking`, `Evaluating Answer`).
+* **Typography**: Modern geometric typography (`Outfit` or `Inter` for headings and body; `JetBrains Mono` for code).
