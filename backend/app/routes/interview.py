@@ -233,6 +233,12 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
 
         curr_follow_up_count = 0
         curr_active_probe = None
+        curr_hint_count = 0
+        curr_hints_given = []
+        speech_clarity_stats = {
+            "total_words": 0,
+            "filler_words": {"um": 0, "uh": 0, "like": 0, "basically": 0, "you know": 0, "actually": 0}
+        }
 
         # Main message loop
         while True:
@@ -240,9 +246,22 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
             data = json.loads(raw_data)
             msg_type = data.get("type")
 
-            # 1. Candidate speech / text response (answers or clarifying questions)
-            if msg_type in ["candidate_answer", "candidate_clarification"]:
+            # 1. Candidate speech / text response (answers, clarifying questions, or hint requests)
+            if msg_type in ["candidate_answer", "candidate_clarification", "candidate_hint_request"]:
                 answer_text = data.get("content", "")
+                if msg_type == "candidate_hint_request" and not answer_text:
+                    answer_text = "Could you please provide a hint on how to approach this?"
+
+                # Speech clarity & filler word telemetry
+                words = answer_text.lower().split()
+                speech_clarity_stats["total_words"] += len(words)
+                for w in words:
+                    cleaned_w = w.strip(".,!?;:")
+                    if cleaned_w in speech_clarity_stats["filler_words"]:
+                        speech_clarity_stats["filler_words"][cleaned_w] += 1
+                if "you know" in answer_text.lower():
+                    speech_clarity_stats["filler_words"]["you know"] += answer_text.lower().count("you know")
+
                 session_transcript.append({
                     "role": "candidate",
                     "content": answer_text,
@@ -262,6 +281,7 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "role": role,
                     "location": "India",
                     "duration_min": 30,
+                    "interviewer_persona": "standard",
                     "questions": questions,
                     "current_question_idx": curr_idx,
                     "current_round": questions[curr_idx].get("round_type") if curr_idx < len(questions) else "behavioral",
@@ -272,6 +292,9 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "difficulty_level": "medium",
                     "follow_up_count": curr_follow_up_count,
                     "active_follow_up_topic": curr_active_probe,
+                    "hint_count": curr_hint_count,
+                    "hints_given": curr_hints_given,
+                    "speech_clarity_metrics": speech_clarity_stats,
                     "violations": session_violations,
                     "body_language_samples": session_body_samples,
                     "code_submissions": [],
@@ -287,7 +310,11 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                 new_difficulty = step_result.get("difficulty_level", "medium")
                 curr_follow_up_count = step_result.get("follow_up_count", 0)
                 curr_active_probe = step_result.get("active_follow_up_topic")
+                curr_hint_count = step_result.get("hint_count", 0)
+                curr_hints_given = step_result.get("hints_given", [])
                 is_clarification = bool(step_result.get("is_clarification"))
+                is_hint = bool(step_result.get("is_hint"))
+                hint_tier = step_result.get("hint_tier", curr_hint_count)
 
                 # Check if interview complete
                 if curr_idx >= len(questions) or step_result.get("phase") == "feedback":
@@ -299,11 +326,15 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
 
                 # Deliver the dynamic, human AI interviewer speech
                 next_q = questions[curr_idx]
-                is_probe = bool(curr_active_probe) and not is_clarification
+                is_probe = bool(curr_active_probe) and not is_clarification and not is_hint
                 interviewer_speech = step_result.get("latest_interviewer_response")
 
                 if not interviewer_speech:
-                    if is_clarification:
+                    if is_hint:
+                        interviewer_speech = (
+                            "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade space for O(1) lookups."
+                        )
+                    elif is_clarification:
                         interviewer_speech = (
                             "Good question! Feel free to outline the brute force intuition briefly in 30 seconds so we are aligned on the baseline, "
                             "but please implement the optimal solution directly in code. Go ahead whenever you are ready!"
@@ -325,11 +356,20 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
                     "is_clarification": is_clarification,
+                    "is_hint": is_hint,
+                    "hint_tier": hint_tier if is_hint else None,
                     "is_follow_up": is_probe,
                     "timestamp": time.time()
                 })
 
-                msg_response_type = "ai_clarification" if is_clarification else ("ai_follow_up" if is_probe else "ai_question")
+                if is_hint:
+                    msg_response_type = "ai_hint"
+                elif is_clarification:
+                    msg_response_type = "ai_clarification"
+                elif is_probe:
+                    msg_response_type = "ai_follow_up"
+                else:
+                    msg_response_type = "ai_question"
 
                 await manager.send_json(interview_id, {
                     "type": msg_response_type,
@@ -337,10 +377,13 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "question_idx": curr_idx,
                     "question": next_q,
                     "content": interviewer_speech,
+                    "is_hint": is_hint,
+                    "hint_tier": hint_tier if is_hint else None,
                     "is_clarification": is_clarification,
                     "is_follow_up": is_probe,
                     "probed_topic": curr_active_probe,
                     "difficulty": new_difficulty,
+                    "speech_clarity": speech_clarity_stats,
                     "timestamp": time.time()
                 })
 

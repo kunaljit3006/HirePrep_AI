@@ -209,3 +209,85 @@ async def test_human_interviewer_handles_candidate_clarification():
     # 4. Spoken interviewer response must answer the clarification directly
     clarification_spoken = eval_state.get("latest_interviewer_response", "")
     assert any(term in clarification_spoken.lower() for term in ["brute force", "optimal", "code", "ready"])
+
+
+@pytest.mark.asyncio
+async def test_human_interviewer_handles_hint_request():
+    """
+    Verifies that when a candidate asks for a hint:
+    1. It detects intent = 'hint_request'.
+    2. Delivers Tier 1 graduated hint (intuition nudge).
+    3. Keeps current_question_idx on the same question (does NOT skip).
+    4. Sets phase = 'awaiting_candidate' so candidate can use the hint to code/answer.
+    5. On a second hint request, increments to Tier 2 hint.
+    """
+    config = {"configurable": {"thread_id": "test-hint-004"}}
+
+    state = {
+        "interview_id": "intv-hint-004",
+        "user_id": "candidate-004",
+        "resume_bytes": None,
+        "resume_filename": None,
+        "resume_data": None,
+        "detected_profile_links": None,
+        "scraped_profiles": None,
+        "company": "Google",
+        "role": "Software Engineer",
+        "location": "India",
+        "duration_min": 30,
+        "interviewer_persona": "google_staff",
+        "questions": [
+            {
+                "id": "q1",
+                "round_type": "coding",
+                "topic": "Algorithms",
+                "title": "Two Sum",
+                "description": "Find two numbers in array that add to target.",
+                "expected_key_points": ["Hash map O(N)"]
+            }
+        ],
+        "current_question_idx": 0,
+        "current_round": "coding",
+        "transcript": [],
+        "latest_candidate_response": "I'm a bit stuck on how to avoid the O(N^2) brute force. Can I get a small hint or pointer?",
+        "latest_interviewer_response": None,
+        "current_score": 75.0,
+        "difficulty_level": "medium",
+        "follow_up_count": 0,
+        "active_follow_up_topic": None,
+        "is_clarification": False,
+        "hint_count": 0,
+        "hints_given": [],
+        "violations": [],
+        "body_language_samples": [],
+        "code_submissions": [],
+        "phase": "evaluate",
+        "feedback_report": None
+    }
+
+    # Step 1: Candidate requests Hint Tier 1
+    eval_state = await interview_graph.ainvoke(state, config=config)
+
+    assert eval_state["current_question_idx"] == 0
+    assert eval_state.get("is_hint") is True
+    assert eval_state.get("hint_tier") == 1
+    assert eval_state.get("hint_count") == 1
+    assert eval_state.get("phase") == "awaiting_candidate"
+    assert len(eval_state.get("hints_given", [])) == 1
+
+    spoken_hint = eval_state.get("latest_interviewer_response", "")
+    assert any(term in spoken_hint.lower() for term in ["pointer", "hash map", "two pointers", "lookup", "hint"])
+
+    # Step 2: Candidate asks for a second hint on the same question -> Tier 2
+    state_step2 = dict(eval_state)
+    state_step2["latest_candidate_response"] = "Could you give me another hint on how to structure the state?"
+    state_step2["phase"] = "evaluate"
+
+    eval_state2 = await interview_graph.ainvoke(state_step2, config=config)
+
+    assert eval_state2["current_question_idx"] == 0
+    assert eval_state2.get("is_hint") is True
+    assert eval_state2.get("hint_tier") == 2
+    assert eval_state2.get("hint_count") == 2
+    assert eval_state2.get("phase") == "awaiting_candidate"
+    assert len(eval_state2.get("hints_given", [])) == 2

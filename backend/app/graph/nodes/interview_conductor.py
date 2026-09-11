@@ -24,14 +24,35 @@ async def interview_conductor_node(state: InterviewState) -> Dict[str, Any]:
 
     active_probe = state.get("active_follow_up_topic")
     latest_candidate_answer = state.get("latest_candidate_response", "")
+    persona = state.get("interviewer_persona", "standard")
+
+    persona_guide = ""
+    if persona == "amazon_bar_raiser":
+        persona_guide = (
+            "INTERVIEWER PERSONA (Amazon Bar Raiser):\n"
+            "- Relentlessly probe for concrete metrics, quantifiable impact, and trade-offs.\n"
+            "- Emphasize Amazon Leadership Principles (Customer Obsession, Ownership, Bias for Action, Disagree and Commit).\n\n"
+        )
+    elif persona == "google_staff":
+        persona_guide = (
+            "INTERVIEWER PERSONA (Google Senior Staff):\n"
+            "- Probe deeply on asymptotic complexity, mathematical Big-O lower bounds, and distributed scalability bottlenecks.\n"
+            "- Rigorously challenge assumptions and memory bounds.\n\n"
+        )
+    elif persona == "startup_cto":
+        persona_guide = (
+            "INTERVIEWER PERSONA (Fast-Paced Startup CTO):\n"
+            "- Focus on execution speed, practical maintainability, simplicity, and debugging resiliency over theoretical over-engineering.\n\n"
+        )
 
     if active_probe:
         prompt = (
-            f"You are a Senior Staff Engineer and technical interviewer at {state.get('company')} interviewing a candidate for a {state.get('role')} role.\n"
+            f"You are a Senior Technical Interviewer at {state.get('company')} interviewing for a {state.get('role')} role.\n"
+            f"{persona_guide}"
             f"Candidate's latest answer: \"{latest_candidate_answer}\"\n"
             f"ACTIVE LISTENING TRIGGER: You noticed they mentioned or based their response on: '{active_probe}'.\n\n"
             "HUMAN INTERVIEWER INSTRUCTIONS:\n"
-            "1. Speak naturally and conversationally, exactly like a real human interviewer at Google, Amazon, or Meta.\n"
+            "1. Speak naturally and conversationally, exactly like a real human interviewer.\n"
             "2. Start with a brief, organic human acknowledgment (e.g., 'Got it.', 'Understood.', 'Makes sense.', 'Fair point.', 'Interesting that you brought that up.').\n"
             f"3. Immediately latch onto their exact mention of '{active_probe}' and probe their technical depth. Test whether they truly understand how it works under the hood vs just dropping buzzwords.\n"
             "   - If they mentioned multithreading: ask how they handle synchronization, mutexes/locks, or race conditions.\n"

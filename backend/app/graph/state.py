@@ -17,6 +17,7 @@ class InterviewState(TypedDict):
     role: str
     location: str
     duration_min: int
+    interviewer_persona: Optional[Literal["amazon_bar_raiser", "google_staff", "startup_cto", "standard"]]
 
     # Question Bank & Round Management
     questions: List[Dict[str, Any]]
@@ -32,10 +33,15 @@ class InterviewState(TypedDict):
     follow_up_count: int  # Number of probing follow-ups asked on current question
     active_follow_up_topic: Optional[str]  # e.g., "Redis caching choice", "time complexity trade-off"
     is_clarification: Optional[bool]  # True if candidate asked a clarifying question
+    is_hint: Optional[bool]  # True if candidate requested a hint
+    hint_tier: Optional[int]  # Tier level of the hint provided (1, 2, or 3)
+    hint_count: int  # Number of hints provided on current question
+    hints_given: List[str]  # History of hints provided to the candidate
 
-    # Anti-Cheat & Camera Body Language Telemetry
+    # Anti-Cheat, Camera Body Language & Speech Clarity Telemetry
     violations: List[Dict[str, Any]]
     body_language_samples: List[Dict[str, Any]]
+    speech_clarity_metrics: Optional[Dict[str, Any]]  # Filler word counts, pacing, WPM
     code_submissions: List[Dict[str, Any]]
 
     # Pipeline Phase & Report Output

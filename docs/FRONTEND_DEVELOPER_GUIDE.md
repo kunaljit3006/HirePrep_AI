@@ -244,6 +244,25 @@ After completing an interview, the candidate is routed to `/feedback/[id]`. This
        "question_idx": 0
      }
      ```
+   - **Progressive Hint Request & Response**: Candidates can request hints (or trigger via an `[Ask for a Hint]` button):
+     ```json
+     { "type": "candidate_hint_request", "content": "Can I get a hint on optimizing space?" }
+     ```
+     Server delivers graduated hints (Tier 1: Intuition nudge -> Tier 2: Structural pointer -> Tier 3: Concrete approach):
+     ```json
+     {
+       "type": "ai_hint",
+       "content": "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade a small amount of memory for instant O(1) lookups.",
+       "is_hint": true,
+       "hint_tier": 1,
+       "round_type": "coding",
+       "question_idx": 0,
+       "speech_clarity": {
+         "total_words": 142,
+         "filler_words": { "um": 2, "uh": 1, "like": 3, "basically": 1, "you know": 0, "actually": 0 }
+       }
+     }
+     ```
    - **AI Interviewer Concept Probing (Active Listening)**: When candidate drops a concept (Redis, multithreading, Kafka):
      ```json
      {

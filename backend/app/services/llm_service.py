@@ -233,6 +233,37 @@ class LLMService:
                     break
             target_text = candidate_text if candidate_text else all_content
 
+            # Check if candidate is asking for a hint
+            is_hint_phrase = any(phrase in target_text for phrase in [
+                "hint", "pointer", "stuck", "nudge", "guidance", "help on",
+                "how to approach", "clue", "suggest a direction"
+            ])
+            if is_hint_phrase:
+                hint_tier = 1
+                for m in messages:
+                    c = m.get("content", "")
+                    if "Current Tier: 2/3" in c:
+                        hint_tier = 2
+                    elif "Current Tier: 3/3" in c:
+                        hint_tier = 3
+
+                if hint_tier == 1:
+                    hint_msg = "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade a small amount of memory for instant O(1) lookups."
+                elif hint_tier == 2:
+                    hint_msg = "Take a closer look at what state needs to be maintained: tracking the complement (target - current) allows you to check if the pair has already been visited."
+                else:
+                    hint_msg = "Here is the concrete approach: as you iterate through the array, insert each number into your hash map after checking if target - current exists."
+
+                return json.dumps({
+                    "intent": "hint_request",
+                    "clarification_answer": None,
+                    "hint_content": hint_msg,
+                    "score": None,
+                    "feedback": f"Candidate effectively leveraged a Tier {hint_tier} hint to proceed.",
+                    "difficulty_adjustment": "same",
+                    "probe_topic": None
+                })
+
             # Check if candidate is asking a clarifying question / cross-asking
             is_clarification_phrase = any(phrase in target_text for phrase in [
                 "brute force", "optimal", "direct optimal", "do we have to", "should i write",

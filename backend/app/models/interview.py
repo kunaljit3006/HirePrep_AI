@@ -11,6 +11,7 @@ class CreateInterviewRequest(BaseModel):
     location: str = "India"
     duration_min: int = 30
     difficulty: Literal["easy", "medium", "hard"] = "medium"
+    interviewer_persona: Literal["amazon_bar_raiser", "google_staff", "startup_cto", "standard"] = "standard"
     resume_id: Optional[str] = None
     custom_topics: List[str] = Field(default_factory=list)
 
@@ -44,6 +45,7 @@ class InterviewSessionResponse(BaseModel):
     current_round: str
     current_question_idx: int
     total_questions: int
+    interviewer_persona: Optional[str] = "standard"
     questions: List[QuestionItem] = Field(default_factory=list)
     created_at: str
     started_at: Optional[str] = None
