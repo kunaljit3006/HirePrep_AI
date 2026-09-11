@@ -222,15 +222,51 @@ class LLMService:
             )
 
         elif agent_name == "evaluate_response":
-            probe = None
             candidate_text = ""
             for m in messages:
                 content = m.get("content", "")
-                if "Candidate Answer:" in content:
+                if "Candidate Said:" in content:
+                    candidate_text = content.split("Candidate Said:")[-1].split("Instructions:")[0].lower()
+                    break
+                elif "Candidate Answer:" in content:
                     candidate_text = content.split("Candidate Answer:")[-1].split("Instructions:")[0].lower()
                     break
             target_text = candidate_text if candidate_text else all_content
 
+            # Check if candidate is asking a clarifying question / cross-asking
+            is_clarification_phrase = any(phrase in target_text for phrase in [
+                "brute force", "optimal", "direct optimal", "do we have to", "should i write",
+                "can i assume", "are duplicates", "can there be", "pseudocode", "start with brute",
+                "clarify", "is it okay if", "time complexity requirement"
+            ])
+            has_question_structure = any(token in target_text for token in ["?", "should", "can", "do we", "or"])
+
+            if is_clarification_phrase and has_question_structure:
+                if any(w in target_text for w in ["brute force", "optimal", "direct"]):
+                    clarification_text = (
+                        "Good question! Feel free to outline the brute force intuition briefly in 30 seconds so we are aligned on the baseline, "
+                        "but please implement the optimal solution directly in code. Go ahead whenever you are ready!"
+                    )
+                elif any(w in target_text for w in ["duplicate", "negative", "integer", "range", "constraint"]):
+                    clarification_text = (
+                        "Great clarifying question. You can assume the input contains valid integers within standard memory limits, "
+                        "and there are no special formatting quirks. Please proceed with your implementation."
+                    )
+                else:
+                    clarification_text = (
+                        "That is a fair clarifying question! Feel free to make standard production-grade assumptions and explain them as you build out your solution."
+                    )
+
+                return json.dumps({
+                    "intent": "clarification",
+                    "clarification_answer": clarification_text,
+                    "score": None,
+                    "feedback": "Candidate actively gathered requirements and clarified expectations before implementation.",
+                    "difficulty_adjustment": "same",
+                    "probe_topic": None
+                })
+
+            probe = None
             if any(w in target_text for w in ["multithreading", "threading", "threads", "concurrency", "mutex", "lock", "race condition", "deadlock"]):
                 probe = "multithreading synchronization and race conditions"
             elif any(w in target_text for w in ["redis", "caching", "cache", "memcached"]):
@@ -242,6 +278,8 @@ class LLMService:
             elif any(w in target_text for w in ["microservices", "microservice", "docker", "kubernetes"]):
                 probe = "microservices decoupling and failure isolation"
             return json.dumps({
+                "intent": "answer",
+                "clarification_answer": None,
                 "score": 75.0,
                 "feedback": "Demonstrates practical engineering perspective and awareness of systems trade-offs.",
                 "difficulty_adjustment": "same",

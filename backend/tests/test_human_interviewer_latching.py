@@ -133,3 +133,79 @@ async def test_human_interviewer_latches_on_multithreading():
     # Asserts that the spoken prompt directly challenges thread safety / synchronization
     spoken_question = eval_state.get("latest_interviewer_response", "")
     assert any(term in spoken_question.lower() for term in ["thread", "race", "synchronization", "concurrency"])
+
+
+@pytest.mark.asyncio
+async def test_human_interviewer_handles_candidate_clarification():
+    """
+    Verifies that when a candidate asks a clarifying question (e.g. 'Do we have to write
+    the brute force first or direct optimal solution?'), the AI interviewer behaves like
+    a real human:
+    1. Detects that the candidate is clarifying approach/scope, NOT giving an answer.
+    2. Does NOT score or penalize the question yet.
+    3. Does NOT advance current_question_idx to the next question.
+    4. Answers the clarification directly, supportively, and conversationally.
+    5. Returns phase = 'awaiting_candidate' so the candidate can now proceed with their answer/code.
+    """
+    config = {"configurable": {"thread_id": "test-clarification-003"}}
+
+    state = {
+        "interview_id": "intv-clarify-003",
+        "user_id": "candidate-003",
+        "resume_bytes": None,
+        "resume_filename": None,
+        "resume_data": None,
+        "detected_profile_links": None,
+        "scraped_profiles": None,
+        "company": "Microsoft",
+        "role": "Software Engineer",
+        "location": "India",
+        "duration_min": 30,
+        "questions": [
+            {
+                "id": "q1",
+                "round_type": "coding",
+                "topic": "Algorithms",
+                "title": "Two Sum / Pair Sum",
+                "description": "Find two numbers in an array that add up to a target sum.",
+                "expected_key_points": ["Hash Map O(N)", "Two pointers if sorted"]
+            },
+            {
+                "id": "q2",
+                "round_type": "system_design",
+                "topic": "Distributed Cache",
+                "title": "Cache Design",
+                "description": "Design an LRU cache.",
+                "expected_key_points": ["Hash map + Doubly linked list"]
+            }
+        ],
+        "current_question_idx": 0,
+        "current_round": "coding",
+        "transcript": [],
+        "latest_candidate_response": "Do we have to write the brute force first or direct optimal solution?",
+        "latest_interviewer_response": None,
+        "current_score": 75.0,
+        "difficulty_level": "medium",
+        "follow_up_count": 0,
+        "active_follow_up_topic": None,
+        "violations": [],
+        "body_language_samples": [],
+        "code_submissions": [],
+        "phase": "evaluate",
+        "feedback_report": None
+    }
+
+    eval_state = await interview_graph.ainvoke(state, config=config)
+
+    # 1. State must stay on question 0 (do NOT skip or advance!)
+    assert eval_state["current_question_idx"] == 0
+
+    # 2. Must recognize this was a clarifying question
+    assert eval_state.get("is_clarification") is True
+
+    # 3. Phase must be awaiting_candidate so candidate can now code/answer
+    assert eval_state.get("phase") == "awaiting_candidate"
+
+    # 4. Spoken interviewer response must answer the clarification directly
+    clarification_spoken = eval_state.get("latest_interviewer_response", "")
+    assert any(term in clarification_spoken.lower() for term in ["brute force", "optimal", "code", "ready"])

@@ -240,8 +240,8 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
             data = json.loads(raw_data)
             msg_type = data.get("type")
 
-            # 1. Candidate speech / text response
-            if msg_type == "candidate_answer":
+            # 1. Candidate speech / text response (answers or clarifying questions)
+            if msg_type in ["candidate_answer", "candidate_clarification"]:
                 answer_text = data.get("content", "")
                 session_transcript.append({
                     "role": "candidate",
@@ -251,7 +251,7 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "timestamp": time.time()
                 })
 
-                # Acknowledge candidate answer
+                # Acknowledge candidate input
                 await manager.send_json(interview_id, {"type": "answer_received", "status": "evaluating"})
 
                 # Execute LangGraph state turn
@@ -283,10 +283,11 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                 step_result = await interview_graph.ainvoke(graph_state, config=thread_config)
 
                 # Update index & difficulty & organic follow-up state
-                curr_idx = step_result.get("current_question_idx", curr_idx + 1)
+                curr_idx = step_result.get("current_question_idx", curr_idx)
                 new_difficulty = step_result.get("difficulty_level", "medium")
                 curr_follow_up_count = step_result.get("follow_up_count", 0)
                 curr_active_probe = step_result.get("active_follow_up_topic")
+                is_clarification = bool(step_result.get("is_clarification"))
 
                 # Check if interview complete
                 if curr_idx >= len(questions) or step_result.get("phase") == "feedback":
@@ -298,11 +299,16 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
 
                 # Deliver the dynamic, human AI interviewer speech
                 next_q = questions[curr_idx]
-                is_probe = bool(curr_active_probe)
+                is_probe = bool(curr_active_probe) and not is_clarification
                 interviewer_speech = step_result.get("latest_interviewer_response")
 
                 if not interviewer_speech:
-                    if is_probe:
+                    if is_clarification:
+                        interviewer_speech = (
+                            "Good question! Feel free to outline the brute force intuition briefly in 30 seconds so we are aligned on the baseline, "
+                            "but please implement the optimal solution directly in code. Go ahead whenever you are ready!"
+                        )
+                    elif is_probe:
                         interviewer_speech = (
                             f"Got it. You brought up {curr_active_probe} there—could you walk me through "
                             "how that works under the hood and what trade-offs you weighed?"
@@ -318,16 +324,20 @@ async def interview_websocket_endpoint(websocket: WebSocket, interview_id: str):
                     "content": interviewer_speech,
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
+                    "is_clarification": is_clarification,
                     "is_follow_up": is_probe,
                     "timestamp": time.time()
                 })
 
+                msg_response_type = "ai_clarification" if is_clarification else ("ai_follow_up" if is_probe else "ai_question")
+
                 await manager.send_json(interview_id, {
-                    "type": "ai_follow_up" if is_probe else "ai_question",
+                    "type": msg_response_type,
                     "round_type": next_q.get("round_type"),
                     "question_idx": curr_idx,
                     "question": next_q,
                     "content": interviewer_speech,
+                    "is_clarification": is_clarification,
                     "is_follow_up": is_probe,
                     "probed_topic": curr_active_probe,
                     "difficulty": new_difficulty,

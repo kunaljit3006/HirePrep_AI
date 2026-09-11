@@ -31,6 +31,7 @@ class InterviewState(TypedDict):
     difficulty_level: Literal["easy", "medium", "hard"]
     follow_up_count: int  # Number of probing follow-ups asked on current question
     active_follow_up_topic: Optional[str]  # e.g., "Redis caching choice", "time complexity trade-off"
+    is_clarification: Optional[bool]  # True if candidate asked a clarifying question
 
     # Anti-Cheat & Camera Body Language Telemetry
     violations: List[Dict[str, Any]]
