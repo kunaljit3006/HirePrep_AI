@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="./assets/banner.png" alt="HirePrep_AI" width="100%" />
+</p>
+
+> Autonomous Multi-Agent AI Mock Interview Platform powered by **FastAPI** and **LangGraph**.
+
 # HirePrep AI 🚀
 
 HirePrep AI is a state-of-the-art **Autonomous Multi-Agent Mock Interview Platform** designed to simulate real-world, high-bar technical interviews. Driven by a LangGraph multi-agent backend, the platform dynamically tailors its questions, difficulty, and follow-ups based on the candidate's resume, coding profiles (GitHub, LeetCode, Codeforces), and real-time performance.
