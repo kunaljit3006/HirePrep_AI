@@ -717,7 +717,7 @@ export default function AuthPage() {
               onClick={handleGuestDemo}
             >
               <span className="terminal-prompt mono">&gt;_</span>
-              <span>Fast Guest Demo Access (Instant SQLite + AI Sync)</span>
+              <span>Guest Access</span>
               <span className="guest-arrow">→</span>
             </button>
           </div>

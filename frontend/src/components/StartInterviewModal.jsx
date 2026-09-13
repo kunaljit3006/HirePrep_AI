@@ -42,9 +42,9 @@ export default function StartInterviewModal({ isOpen, onClose, defaultCompany = 
   const [resumeFile, setResumeFile] = useState(null)
   const [activeResume, setActiveResume] = useState(null)
   const [activeResumeLoading, setActiveResumeLoading] = useState(false)
-  const [company, setCompany] = useState(defaultCompany || 'Google')
-  const [role, setRole] = useState(defaultRole || 'Full Stack AI Engineer')
-  const [location, setLocation] = useState(defaultLocation || 'India / Hybrid')
+  const [company, setCompany] = useState(defaultCompany || '')
+  const [role, setRole] = useState(defaultRole || '')
+  const [location, setLocation] = useState(defaultLocation || '')
   const [durationMin, setDurationMin] = useState(30)
   const [difficulty, setDifficulty] = useState('medium')
   const [dragOver, setDragOver] = useState(false)
@@ -251,8 +251,8 @@ export default function StartInterviewModal({ isOpen, onClose, defaultCompany = 
                       <div className="file-details">
                         <span className="file-name">
                           {(activeResume.data?.candidate_name || activeResume.data?.name)
-                            ? `${activeResume.data.candidate_name || activeResume.data.name}'s Resume Attached`
-                            : 'Active Profile CV Attached'}
+                            ? `${activeResume.data.candidate_name || activeResume.data.name}'s Previous Resume Auto-Loaded`
+                            : 'Active Profile CV Auto-Loaded'}
                         </span>
                         <span className="file-size mono">
                           {activeResume.data?.projects?.length || 0} Projects • {

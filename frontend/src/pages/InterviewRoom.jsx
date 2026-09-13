@@ -599,7 +599,7 @@ export default function InterviewRoom() {
       const recognition = new SpeechRecognition()
       recognition.continuous = true
       recognition.interimResults = true
-      recognition.lang = 'en-US'
+      recognition.lang = 'en-IN'
 
       recognition.onresult = (event) => {
         let transcript = ''

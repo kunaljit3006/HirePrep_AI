@@ -169,7 +169,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             "2. DO NOT validate their answer (do NOT say 'nice', 'great', or 'you are on the right track').\n"
             "3. Gently challenge their assumption or point out the flaw conversationally (e.g., 'Hmm, are you sure about that? What if...' or 'Actually, in that scenario...').\n"
             "4. Keep your response concise, warm, and encouraging (1 to 2 sentences max). Offer a hint if they seem completely stuck.\n"
-            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') and SSML pause tags `<break time=\"500ms\"/>` to simulate thinking on the spot.\n"
+            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') to simulate thinking on the spot.\n"
         )
         user_prompt = "Gently challenge the incorrect answer or offer a hint."
     elif active_probe == "elaboration_needed":
@@ -185,7 +185,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             "2. DO NOT validate their answer as fully correct yet. Do NOT say 'nice' or 'you are on the right track' if they haven't actually answered the core problem.\n"
             "3. Gently ask them to elaborate (e.g., 'Could you go into a little more detail?' or 'How would that work under the hood?').\n"
             "4. Keep your question concise, warm, and encouraging (1 to 2 sentences max).\n"
-            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') and SSML pause tags `<break time=\"500ms\"/>` to simulate thinking on the spot.\n"
+            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') to simulate thinking on the spot.\n"
         )
         user_prompt = "Ask an organic human follow-up asking them to elaborate."
     elif active_probe:
@@ -206,7 +206,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             "   - If they mentioned database sharding/partitioning: ask about the partition key strategy or skew mitigation.\n"
             "   - If they mentioned Parquet/Lakehouse: ask about compression ratios, small file problems, or predicate pushdown.\n"
             "4. Keep your question concise, sharp, and realistic (1 to 2 sentences max). Never sound like a robot reading a script.\n"
-            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Right...', 'So...') and SSML pause tags `<break time=\"500ms\"/>` to simulate thinking on the spot.\n"
+            "5. Inject natural human disfluencies (e.g., 'Hmm...', 'Right...', 'So...') to simulate thinking on the spot.\n"
             "6. If the candidate goes on a tangent, gracefully acknowledge it and ask a quick follow-up before steering back, rather than rigidly forcing them back immediately.\n"
         )
         user_prompt = f"Ask an organic human follow-up probing their mention of: {active_probe}"
@@ -259,12 +259,13 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             f"{coach_instructions}\n"
             "HUMAN CONVERSATIONAL BRIDGING RULES:\n"
             "1. Deliver the question naturally, exactly as a human tech lead would on a video call or in-person interview.\n"
-            "2. Resume Grounding: If this is Question 1 or a resume deep-dive, explicitly cite their project or past background.\n"
-            "3. Introducing 'Out-of-the-Box' Tools: If the question introduces a technology (e.g. Kafka, Redis, Parquet, Kubernetes) that may be new to their resume, bridge conversationally like a real human: e.g., 'Looking at your background, you've worked extensively with [their tech]. Here at [Company], we operate at scale with [tool]. Have you heard about or worked with [tool] before? Even if not, how would you think about [the problem]?'\n"
-            "4. For coding or system design, warmly invite them: 'Feel free to ask any clarifying questions about constraints or scale before you dive in.'\n"
-            "5. Keep it concise, natural, and conversational (2 to 3 sentences max). Never read out question headers, IDs, or bullet points.\n"
-            "6. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') and SSML pause tags `<break time=\"500ms\"/>` to simulate thinking on the spot.\n"
-            "7. If the candidate goes on a tangent, gracefully acknowledge it and ask a quick follow-up before steering back, rather than rigidly forcing them back immediately.\n"
+            "2. TRANSCRIPTION LENIENCY: You are reading raw, error-prone Speech-to-Text output. Do NOT take words literally if they don't fit the technical context. Phonetically deduce what the candidate actually meant based on the current engineering topic (e.g. if they say 'child feature' in OOP, deduce 'child class'; if they say an unrecognized acronym, deduce it's an institution or tool). Respond to their true intent naturally.\n"
+            "3. Keep your response extremely concise (1-2 sentences) to ensure the fastest possible latency. Never read out question headers, IDs, or bullet points.\n"
+            "4. Resume Grounding: If this is Question 1 or a resume deep-dive, explicitly cite their project or past background.\n"
+            "5. Introducing 'Out-of-the-Box' Tools: If the question introduces a technology (e.g. Kafka, Redis, Parquet, Kubernetes) that may be new to their resume, bridge conversationally like a real human: e.g., 'Looking at your background, you've worked extensively with [their tech]. Here at [Company], we operate at scale with [tool]. Have you heard about or worked with [tool] before?'\n"
+            "6. For coding or system design, warmly invite them: 'Feel free to ask any clarifying questions about constraints or scale before you dive in.'\n"
+            "7. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') to simulate thinking on the spot.\n"
+            "8. If the candidate goes on a tangent, gracefully acknowledge it and ask a quick follow-up before steering back, rather than rigidly forcing them back immediately.\n"
         )
         user_prompt = f"Present the next question naturally to {c_name} adapting based on their previous answers: {current_q.get('title')} ({current_q.get('description')})"
 
