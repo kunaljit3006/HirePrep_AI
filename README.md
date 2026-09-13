@@ -29,7 +29,7 @@ HirePrep AI is a state-of-the-art **Autonomous Multi-Agent Mock Interview Platfo
 |---|---|
 | **Frontend** | React 18, Vite, TailwindCSS, Monaco Editor, React-Flow, WebRTC |
 | **Backend** | Python 3.10+, FastAPI, WebSockets |
-| **AI / Multi-Agent Engine** | LangGraph, LangChain, OpenAI / Anthropic Models |
+| **AI / Multi-Agent Engine** | LangGraph, LiteLLM (Groq: LLaMA-3, Qwen; Gemini API: Gemini 2.5 Flash) |
 | **Data / Auth** | Supabase (PostgreSQL, Row Level Security, Auth) |
 | **Code Execution** | Custom AST Sandbox / Remote Code Execution integrations |
 
@@ -66,14 +66,19 @@ The platform operates on a robust client-server architecture:
 ## 🧠 Low-Level Agent Architecture (LangGraph)
 
 ```mermaid
-flowchart LR
-    A(Resume Parser) --> B(Profile Aggregator)
-    B --> C(Question Researcher)
-    C --> D(Interview Conductor)
-    
-    D <-->|Candidate Response| E(Response Evaluator)
-    E -->|If technical round ends| F(Feedback Generator)
-    E -->|Next Question| D
+flowchart TD
+    S(Supervisor Node) --> A(Resume Parser)
+    A --> S
+    S --> B(Profile Scraper)
+    B --> S
+    S --> C(Question Researcher)
+    C --> S
+    S --> D(Interview Conductor)
+    D --> S
+    S --> E(Evaluate Response)
+    E --> S
+    S --> F(Feedback Generator)
+    F --> S
 ```
 
 The core intelligence is powered by a cyclic graph of specialized agents operating on a shared `InterviewState`:
@@ -84,6 +89,37 @@ The core intelligence is powered by a cyclic graph of specialized agents operati
 - **Agent 4: Interview Conductor:** The "Human Interface". Manages conversational bridging, empathy, time awareness, Reverse Q&A, and delivers adaptive hints.
 - **Agent 5: Response Evaluator:** Analyzes candidate intent (Hint Request, Clarification, Answer). Grades depth, identifies concept gaps, enforces the STAR behavioral framework, and provides live logic correction.
 - **Agent 6: Feedback Generator:** Compiles the holistic performance data into a detailed rubric, combining integrity scores, camera metrics, and LLM-synthesized roadmaps.
+
+---
+
+## 📡 API Reference
+
+Below is a non-exhaustive list of the core FastAPI endpoints exposed by the backend:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| **Auth & Profile** |
+| `GET` | `/api/auth/me` | Fetches candidate profile and aggregated interview stats. |
+| `POST` | `/api/auth/sync` | Synchronizes user data with the FastAPI backend UserModel. |
+| `PUT` | `/api/auth/profile` | Updates candidate career preferences and coding profiles. |
+| `DELETE` | `/api/auth/account` | Permanently deletes the candidate's account and data. |
+| **Resume & Scraping** |
+| `POST` | `/api/resume/upload` | Uploads a resume file (PDF/DOCX) for AI parsing. |
+| `GET` | `/api/resume/latest` | Fetches the user's latest parsed resume if available. |
+| `POST` | `/api/profile/scrape-from-resume/{resume_id}` | Triggers async scraping of coding profiles identified in a resume. |
+| `GET` | `/api/profile/github/{username}` | Scrapes a specific GitHub profile. |
+| **Interview Engine** |
+| `POST` | `/api/interview/start` | Initializes a new AI mock interview session tailored to the resume and company. |
+| `GET` | `/api/interview/{id}` | Fetches an ongoing or completed interview session by ID. |
+| `GET` | `/api/interview/history` | Fetches past interview session history for the candidate. |
+| `POST` | `/api/interview/{id}/code` | Evaluates candidate code in the AST Python sandbox. |
+| `POST` | `/api/interview/{id}/diagram` | Submits candidate's architecture whiteboard diagram for evaluation. |
+| `WS` | `/api/interview/ws/{id}` | **WebSocket connection for live, duplex streaming of the interview conversation.** |
+| **Feedback & Analytics** |
+| `GET` | `/api/feedback/{id}` | Retrieves the comprehensive feedback report for an interview session. |
+| `POST` | `/api/feedback/{id}/generate` | Manually triggers LangGraph feedback report generation. |
+| `GET` | `/api/feedback/user/history` | Retrieves a history of all feedback reports. |
+| `GET` | `/api/feedback/analytics/summary` | Retrieves candidate analytics overview (trends, radar, strengths). |
 
 ---
 
@@ -121,7 +157,7 @@ HirePrep_AI/
 ### Prerequisites
 - Node.js (v18+)
 - Python (3.10+)
-- LLM API Keys (OpenAI / Anthropic / Groq)
+- LLM API Keys (Groq / Gemini / HuggingFace / OpenRouter)
 - Supabase Account (for Auth and Database)
 
 ### 1. Backend Setup
