@@ -35,7 +35,7 @@ jobs:
       - name: Zip backend artifact
         run: |
           cd backend
-          zip -r ../backend.zip . -x "antenv/*" -x "__pycache__/*" -x ".pytest_cache/*" -x "hireprep.db"
+          zip -r ../backend.zip . -x "__pycache__/*" -x ".pytest_cache/*" -x "hireprep.db"
                 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
