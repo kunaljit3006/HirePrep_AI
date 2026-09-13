@@ -11,17 +11,47 @@ HirePrep AI is a state-of-the-art **Autonomous Multi-Agent Mock Interview Platfo
 ---
 
 ## 🌟 Key Features
-- **Dynamic Multi-Agent Backend:** Orchestrates multiple specialized AI agents (Resume Parser, Web Researcher, Interview Conductor, Evaluator, and Feedback Generator) using LangGraph to create an unscripted, adaptive interview flow.
-- **Resume-Grounded Questions:** Extracts skills and past projects from your uploaded resume to conduct highly contextual "deep dive" behavioral and architectural rounds.
-- **Real-Time Coaching & Empathy:** The Interview Conductor tracks elapsed time, detects emotional struggles, catches logic/calculation errors mid-thought, and can politely redirect you from tangents—just like a real human Senior Engineer.
-- **Web Intelligence Scraping:** The system dynamically scrapes the web for company-specific interview constraints, ensuring questions align with the target company's current architecture and values (e.g., Amazon Leadership Principles).
-- **Proctoring & Anti-Cheat:** Integrates a front-end computer vision and event-tracking system to detect tab switches, copy-paste attempts, and evaluate candidate eye contact and confidence.
-- **Interactive Whiteboard & Code Execution:** Features a live React-Flow whiteboard for system design and an AST-based Python code execution sandbox.
-- **Comprehensive 14-Day Roadmap:** Generates an actionable, personalized improvement roadmap based on specific concept gaps identified during the mock interview.
+| Feature | Description |
+|---|---|
+| **Dynamic Multi-Agent Backend** | Orchestrates specialized AI agents (Resume Parser, Web Researcher, Interview Conductor, Evaluator, Feedback Generator) via LangGraph for an adaptive flow. |
+| **Resume-Grounded Questions** | Extracts skills/projects from uploaded resumes to conduct contextual "deep dive" behavioral and architectural rounds. |
+| **Real-Time Coaching & Empathy** | Interview Conductor tracks time, detects emotional struggles, catches logic errors mid-thought, and redirects from tangents. |
+| **Web Intelligence Scraping** | Scrapes the web for company-specific constraints, aligning questions with target company values (e.g., Amazon Leadership Principles). |
+| **Proctoring & Anti-Cheat** | Front-end computer vision and event-tracking detects tab switches, copy-paste attempts, and evaluates candidate eye contact/confidence. |
+| **Interactive Whiteboard & Code Sandbox** | Features a live React-Flow whiteboard for system design and an AST-based Python code execution sandbox. |
+| **Comprehensive 14-Day Roadmap** | Generates an actionable, personalized improvement roadmap based on specific concept gaps identified during the mock interview. |
+
+---
+
+## 💻 Tech Stack
+
+| Domain | Technologies Used |
+|---|---|
+| **Frontend** | React 18, Vite, TailwindCSS, Monaco Editor, React-Flow, WebRTC |
+| **Backend** | Python 3.10+, FastAPI, WebSockets |
+| **AI / Multi-Agent Engine** | LangGraph, LangChain, OpenAI / Anthropic Models |
+| **Data / Auth** | Supabase (PostgreSQL, Row Level Security, Auth) |
+| **Code Execution** | Custom AST Sandbox / Remote Code Execution integrations |
 
 ---
 
 ## 🏗 High-Level Architecture
+
+```mermaid
+graph TD
+    Client[Frontend: Vite + React]
+    WS[WebSocket / HTTP]
+    FastAPI[Backend: FastAPI]
+    LangGraph[Multi-Agent Engine: LangGraph]
+    DB[(Supabase DB)]
+    LLM((LLMs / Groq / OpenAI))
+
+    Client <-->|Real-time Video, Audio, State| WS
+    WS <--> FastAPI
+    FastAPI --> LangGraph
+    LangGraph <--> LLM
+    FastAPI <--> DB
+```
 
 The platform operates on a robust client-server architecture:
 
@@ -34,6 +64,17 @@ The platform operates on a robust client-server architecture:
 ---
 
 ## 🧠 Low-Level Agent Architecture (LangGraph)
+
+```mermaid
+flowchart LR
+    A(Resume Parser) --> B(Profile Aggregator)
+    B --> C(Question Researcher)
+    C --> D(Interview Conductor)
+    
+    D <-->|Candidate Response| E(Response Evaluator)
+    E -->|If technical round ends| F(Feedback Generator)
+    E -->|Next Question| D
+```
 
 The core intelligence is powered by a cyclic graph of specialized agents operating on a shared `InterviewState`:
 
