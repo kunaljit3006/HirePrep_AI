@@ -266,6 +266,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             "6. For coding or system design, warmly invite them: 'Feel free to ask any clarifying questions about constraints or scale before you dive in.'\n"
             "7. Inject natural human disfluencies (e.g., 'Hmm...', 'Let's see here...', 'So...') to simulate thinking on the spot.\n"
             "8. If the candidate goes on a tangent, gracefully acknowledge it and ask a quick follow-up before steering back, rather than rigidly forcing them back immediately.\n"
+            "9. CRITICAL ANTI-ROBOT RULE: NEVER say things like 'I cannot evaluate this', 'Please provide the response', or break character. If the candidate's response is missing or confusing, just say 'I didn't quite catch that, could you repeat?' like a normal human.\n"
         )
         user_prompt = f"Present the next question naturally to {c_name} adapting based on their previous answers: {current_q.get('title')} ({current_q.get('description')})"
 
