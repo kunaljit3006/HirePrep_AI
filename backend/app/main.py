@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db.connection import init_db
+from app.db.redis import redis_manager
 from app.routes.resume import router as resume_router
 from app.routes.profile import router as profile_router
 from app.routes.question import router as question_router
 from app.routes.interview import router as interview_router
 from app.routes.feedback import router as feedback_router
+from app.routes.auth import router as auth_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,7 +25,16 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing HirePrep_AI database tables...")
     await init_db()
     logger.info("Database initialized successfully.")
+    
+    logger.info("Connecting to Redis Cache Layer...")
+    await redis_manager.connect()
+    cache_backend = "Redis" if redis_manager.is_connected_to_redis else "InMemoryFallbackCache"
+    logger.info(f"Cache Layer initialized ({cache_backend}).")
+    
     yield
+    
+    logger.info("Disconnecting Cache Layer...")
+    await redis_manager.disconnect()
     logger.info("HirePrep_AI Backend shutting down.")
 
 app = FastAPI(
@@ -43,6 +54,7 @@ app.add_middleware(
 )
 
 # Register Feature Routers
+app.include_router(auth_router)
 app.include_router(resume_router)
 app.include_router(profile_router)
 app.include_router(question_router)
@@ -68,10 +80,15 @@ async def root():
             "camera_body_language_analysis": "active",
             "selective_profile_scraping": "active",
             "langgraph_state_machine": "active",
-            "realtime_websockets": "active"
+            "realtime_websockets": "active",
+            "distributed_cache": "redis" if redis_manager.is_connected_to_redis else "in_memory_fallback"
         }
     }
 
 @app.get("/health", tags=["System"])
 async def health():
-    return {"status": "healthy", "timestamp": settings.VERSION}
+    return {
+        "status": "healthy",
+        "timestamp": settings.VERSION,
+        "cache_engine": "redis" if redis_manager.is_connected_to_redis else "in_memory_fallback"
+    }

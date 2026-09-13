@@ -29,6 +29,8 @@ async def resume_parser_node(state: InterviewState) -> Dict[str, Any]:
     logger.info(f"Resume parsed. Detected profile links: {list(profile_links_dict.keys())}")
 
     return {
+        "candidate_name": parsed.candidate_name,
+        "experience_level": parsed.experience_level,
         "resume_data": parsed.model_dump(),
         "detected_profile_links": profile_links_dict,
         "phase": "scrape" if profile_links_dict else "prep"

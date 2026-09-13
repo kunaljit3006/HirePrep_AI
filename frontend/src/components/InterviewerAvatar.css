@@ -1,0 +1,289 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   GOOGLE GEMINI LIVE VISUALIZER & FLOATING SUBTITLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.gemini-stage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  min-height: 480px;
+}
+
+/* Visualizer Wrapper */
+.gemini-visualizer-wrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto 40px auto;
+}
+
+/* Ambient Aurora Glow Behind the Orb */
+.gemini-ambient-glow {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.28) 0%, rgba(147, 51, 234, 0.2) 40%, rgba(0, 229, 255, 0.1) 70%, transparent 85%);
+  filter: blur(45px);
+  pointer-events: none;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: geminiAmbientPulse 7s ease-in-out infinite alternate;
+}
+
+.gemini-stage-container.is-speaking .gemini-ambient-glow {
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.45) 0%, rgba(59, 130, 246, 0.35) 45%, rgba(168, 85, 247, 0.25) 70%, transparent 90%);
+  filter: blur(55px);
+  transform: scale(1.22);
+}
+
+/* Fluid Concentric Wave Rings */
+.gemini-wave-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid transparent;
+  transition: all 0.5s ease;
+}
+
+.ring-wave-inner {
+  width: 170px;
+  height: 170px;
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.2);
+  animation: geminiRingFloat 4s ease-in-out infinite;
+}
+
+.ring-wave-mid {
+  width: 210px;
+  height: 210px;
+  border-color: rgba(147, 51, 234, 0.22);
+  animation: geminiRingFloat 5s ease-in-out infinite reverse;
+}
+
+.ring-wave-outer {
+  width: 250px;
+  height: 250px;
+  border-color: rgba(0, 229, 255, 0.15);
+  animation: geminiRingFloat 6s ease-in-out infinite;
+}
+
+.gemini-stage-container.is-speaking .ring-wave-inner {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 35px rgba(0, 229, 255, 0.4);
+  animation: geminiRingPulse 1.8s ease-in-out infinite;
+}
+
+.gemini-stage-container.is-speaking .ring-wave-mid {
+  border-color: rgba(59, 130, 246, 0.5);
+  animation: geminiRingPulse 2.3s ease-in-out infinite 0.3s;
+}
+
+.gemini-stage-container.is-speaking .ring-wave-outer {
+  border-color: rgba(168, 85, 247, 0.35);
+  animation: geminiRingPulse 2.8s ease-in-out infinite 0.6s;
+}
+
+/* Radiant Gemini Core Orb */
+.gemini-core-orb {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #60a5fa 30%, #3b82f6 55%, #1d4ed8 75%, #0f172a 100%);
+  box-shadow: 
+    0 0 40px rgba(59, 130, 246, 0.5),
+    0 0 80px rgba(147, 51, 234, 0.3),
+    inset 0 0 20px rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: geminiOrbBreathing 4s ease-in-out infinite alternate;
+  z-index: 2;
+}
+
+.gemini-stage-container.is-speaking .gemini-core-orb {
+  animation: geminiOrbSpeaking 1.2s ease-in-out infinite alternate;
+  box-shadow: 
+    0 0 50px rgba(0, 229, 255, 0.7),
+    0 0 90px rgba(59, 130, 246, 0.5),
+    inset 0 0 25px rgba(255, 255, 255, 0.8);
+}
+
+.gemini-plasma-fluid {
+  position: absolute;
+  inset: -20%;
+  border-radius: 45%;
+  background: conic-gradient(from 0deg, #38bdf8, #818cf8, #c084fc, #38bdf8);
+  filter: blur(14px);
+  opacity: 0.75;
+  animation: geminiPlasmaSpin 8s linear infinite;
+}
+
+.gemini-inner-light {
+  position: absolute;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(147, 197, 253, 0.6) 50%, transparent 80%);
+  filter: blur(6px);
+  animation: geminiLightPulse 2.5s ease-in-out infinite alternate;
+}
+
+.gemini-sparkle-center {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 15px #ffffff, 0 0 30px #38bdf8;
+  z-index: 3;
+}
+
+/* Fluid Gemini Frequency Waves Ribbon */
+.gemini-waves-strip {
+  position: absolute;
+  bottom: -15px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  z-index: 4;
+}
+
+.gemini-bar {
+  width: 3.5px;
+  height: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: all 0.25s ease;
+}
+
+.gemini-bar.bar-speaking {
+  background: linear-gradient(180deg, #00e5ff 0%, #3b82f6 100%);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  animation: geminiFrequencyDance 0.8s ease-in-out infinite alternate;
+}
+
+.gemini-bar.bar-listening {
+  background: linear-gradient(180deg, #10b981 0%, #06b6d4 100%);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: geminiFrequencyDance 1.2s ease-in-out infinite alternate;
+}
+
+/* Minimal Mute Toggle */
+.gemini-mute-toggle {
+  position: absolute;
+  bottom: -32px;
+  right: -25px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.gemini-mute-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.08);
+}
+
+.gemini-mute-toggle.muted {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ── Floating Middle-Down Subtitle Display ── */
+.gemini-subtitle-container {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  z-index: 5;
+  animation: geminiSubtitleFadeIn 0.4s ease-out;
+}
+
+.gemini-subtitle-bubble {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 18px;
+  padding: 16px 28px;
+  box-shadow: 
+    0 12px 35px -8px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(59, 130, 246, 0.1);
+  text-align: center;
+}
+
+.gemini-subtitle-text {
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Animations */
+@keyframes geminiAmbientPulse {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.1); opacity: 0.95; }
+}
+
+@keyframes geminiRingFloat {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.05) rotate(180deg); }
+}
+
+@keyframes geminiRingPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+@keyframes geminiOrbBreathing {
+  0% { transform: scale(0.96); }
+  100% { transform: scale(1.04); }
+}
+
+@keyframes geminiOrbSpeaking {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.1); }
+}
+
+@keyframes geminiPlasmaSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes geminiLightPulse {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes geminiFrequencyDance {
+  0% { height: 4px; }
+  100% { height: var(--bar-scale, 24px); }
+}
+
+@keyframes geminiSubtitleFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,389 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIGMA-STYLE SYSTEM DESIGN WHITEBOARD STUDIO
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.figma-whiteboard-studio {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #090a0f;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+/* ── FIGMA FLOATING TOOLBAR ── */
+.figma-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(18, 20, 29, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 8px 16px;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.figma-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.figma-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.figma-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.figma-btn.is-active {
+  background: rgba(0, 184, 83, 0.16);
+  border-color: rgba(0, 184, 83, 0.4);
+  color: #00b853;
+  font-weight: 600;
+}
+
+.figma-btn.btn-rotate-action {
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: #00e5ff;
+  font-weight: 600;
+  animation: rotateBtnPulse 2s infinite alternate;
+}
+
+.figma-btn.btn-rotate-action:hover {
+  background: rgba(0, 229, 255, 0.22);
+  border-color: rgba(0, 229, 255, 0.6);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.figma-btn.btn-layer-action {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+}
+
+.figma-btn.btn-layer-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.figma-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+/* Color Swatches */
+.figma-colors-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.figma-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.figma-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.figma-color-dot.dot-selected {
+  border-color: #ffffff;
+  transform: scale(1.25);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+/* Zoom Controls (Figma Style) */
+.figma-zoom-group {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.btn-zoom-step {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-weight: 600;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-zoom-step:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.zoom-readout {
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  padding: 0 6px;
+  cursor: pointer;
+  min-width: 44px;
+  text-align: center;
+}
+
+.zoom-readout:hover {
+  color: #00b853;
+}
+
+/* Actions */
+.figma-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-figma-clear {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-figma-clear:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.btn-figma-eval {
+  background: #00b853;
+  border: none;
+  border-radius: 6px;
+  color: #000000;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 14px rgba(0, 184, 83, 0.3);
+}
+
+.btn-figma-eval:hover:not(:disabled) {
+  background: #00d660;
+  box-shadow: 0 0 20px rgba(0, 184, 83, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-figma-eval:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── QUICK STAMPS (Figma Components) ── */
+.figma-stamps-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(14, 16, 23, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6px 16px;
+  overflow-x: auto;
+}
+
+.stamps-hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.stamps-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.stamp-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: #cbd5e1;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.stamp-chip:hover {
+  background: rgba(0, 184, 83, 0.12);
+  border-color: rgba(0, 184, 83, 0.35);
+  color: #00b853;
+  transform: translateY(-1px);
+}
+
+.stamps-tip {
+  font-size: 0.72rem;
+  color: #475569;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ── INFINITE FIGMA CANVAS ── */
+.figma-canvas-viewport {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #090a0f;
+  cursor: default;
+}
+
+.figma-canvas-viewport.cursor-draw {
+  cursor: crosshair;
+}
+
+.figma-canvas-viewport.cursor-grab {
+  cursor: grab;
+}
+
+.figma-canvas-viewport.cursor-grab:active {
+  cursor: grabbing;
+}
+
+.figma-canvas-element {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* ── IN-PLACE TEXT INPUT (Figma Inline Type inside Component) ── */
+.figma-in-place-input {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1.5px solid #00e5ff;
+  border-radius: 4px;
+  color: #ffffff;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  padding: 4px 8px;
+  outline: none;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+  z-index: 20;
+  transform: translateY(-50%);
+}
+
+/* ── EVALUATION BANNER ── */
+.figma-eval-banner {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 720px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(0, 184, 83, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 14px 20px;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 184, 83, 0.15);
+  z-index: 15;
+  animation: figmaBannerIn 0.3s ease-out;
+}
+
+.eval-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.eval-badge {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: #00b853;
+  font-weight: 700;
+}
+
+.eval-score {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #00e5ff;
+  margin-left: auto;
+}
+
+.btn-eval-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+.btn-eval-close:hover {
+  color: #ffffff;
+}
+
+.eval-text {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@keyframes figmaBannerIn {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}

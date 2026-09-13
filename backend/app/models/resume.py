@@ -33,6 +33,7 @@ class EducationItem(BaseModel):
 
 class ParsedResume(BaseModel):
     candidate_name: Optional[str] = None
+    experience_level: Optional[str] = "Mid"
     email: Optional[str] = None
     phone: Optional[str] = None
     summary: Optional[str] = None

@@ -10,12 +10,10 @@ logger = logging.getLogger("hireprep.node.question_researcher")
 async def question_researcher_node(state: InterviewState) -> Dict[str, Any]:
     """
     Question Researcher Node (Agent 3):
-    Generates a company/role/resume-tailored question bank spanning:
-    - Behavioral
-    - Resume Deep-Dive
-    - Coding / DSA
-    - System Design
-    - CS Fundamentals
+    1. Gathers web intelligence about the company's interview process.
+    2. Determines the dynamic interview round structure (company+role specific).
+    3. Generates a tailored question bank matching that structure.
+    Stores web_intel and structure_notes in state for the conductor to use mid-interview.
     """
     company = state.get("company", "Tech Company")
     role = state.get("role", "Software Engineer")
@@ -32,13 +30,27 @@ async def question_researcher_node(state: InterviewState) -> Dict[str, Any]:
         for cat, skills in resume.skills.items():
             tech_stack.extend(skills)
 
+    # Step 1: Gather web intelligence (Reddit, LeetCode, GFG, HN, GitHub)
+    web_intel = await question_service.gather_all_web_intelligence(company, role)
+    logger.info(f"Web intelligence gathered for {company} {role}: {len(web_intel)} chars")
+
+    # Step 2: Determine dynamic interview structure based on web intel
+    experience_level = "Mid"  # TODO: detect from resume
+    dynamic_rounds, structure_notes = await question_service.determine_interview_structure(
+        company, role, experience_level, web_intel
+    )
+    logger.info(f"Dynamic interview structure: {[r['round_type'] for r in dynamic_rounds]}")
+
+    # Step 3: Generate question bank using the dynamic skeleton
     questions = await question_service.generate_question_bank(
         company=company,
         role=role,
         location=location,
         tech_stack=tech_stack[:8],
         resume=resume,
-        profile_data=profile_data
+        profile_data=profile_data,
+        dynamic_rounds=dynamic_rounds,
+        web_intel_text=web_intel
     )
 
     questions_list = [q.model_dump() for q in questions]
@@ -50,5 +62,13 @@ async def question_researcher_node(state: InterviewState) -> Dict[str, Any]:
         "questions": questions_list,
         "current_question_idx": 0,
         "current_round": first_round,
-        "phase": "interview"
+        "phase": "interview",
+        "web_intel_context": web_intel,
+        "interview_structure_notes": structure_notes,
+        "questions_asked_count": 0,
+        "score_history": [],
+        "topics_covered": [],
+        "concept_gaps": [],
+        "candidate_strengths": [],
     }
+

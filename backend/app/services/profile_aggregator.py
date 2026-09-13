@@ -42,31 +42,45 @@ class ProfileAggregator:
             codeforces_task = asyncio.create_task(codeforces_service.fetch_profile(profile_links.codeforces))
 
         # Await all active scrape tasks in parallel
-        github_data = await github_task if github_task else None
-        leetcode_data = await leetcode_task if leetcode_task else None
-        codeforces_data = await codeforces_task if codeforces_task else None
+        results = await asyncio.gather(*[t for t in [github_task, leetcode_task, codeforces_task] if t], return_exceptions=True)
+        
+        github_data = None
+        leetcode_data = None
+        codeforces_data = None
+        
+        idx = 0
+        if github_task:
+            if not isinstance(results[idx], Exception):
+                github_data = results[idx]
+            else:
+                logger.warning(f"GitHub scraping failed: {results[idx]}")
+            idx += 1
+            
+        if leetcode_task:
+            if not isinstance(results[idx], Exception):
+                leetcode_data = results[idx]
+            else:
+                logger.warning(f"LeetCode scraping failed: {results[idx]}")
+            idx += 1
+            
+        if codeforces_task:
+            if not isinstance(results[idx], Exception):
+                codeforces_data = results[idx]
+            else:
+                logger.warning(f"Codeforces scraping failed: {results[idx]}")
+            idx += 1
 
         # 4. Kaggle
         kaggle_data = None
         if profile_links.kaggle:
-            scanned_platforms.append("kaggle")
-            kaggle_data = KaggleData(
-                username=profile_links.kaggle.split("/")[-1],
-                tier="Expert",
-                competitions_count=4,
-                notebooks_count=8
-            )
+            # TODO: Implement real Kaggle scraper
+            pass
 
         # 5. CodeChef
         codechef_data = None
         if profile_links.codechef:
-            scanned_platforms.append("codechef")
-            codechef_data = CodeChefData(
-                handle=profile_links.codechef.split("/")[-1],
-                stars="3★",
-                rating=1680,
-                global_rank=14200
-            )
+            # TODO: Implement real CodeChef scraper
+            pass
 
         # Generate contextual summary for AI interviewer
         summary_lines = []

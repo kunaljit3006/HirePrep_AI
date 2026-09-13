@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: Optional[str] = None
     REDIS_URL: Optional[str] = None
 
+    # Supabase Auth
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
+    SUPABASE_JWT_SECRET: Optional[str] = None
+    AUTH_ENABLED: bool = True
+
+    # Azure AI Speech (TTS)
+    AZURE_SPEECH_KEY: Optional[str] = None
+    AZURE_SPEECH_REGION: Optional[str] = "eastus"
+    AZURE_SPEECH_VOICE: Optional[str] = None
+
     # CORS
     CORS_ORIGINS: list[str] = ["*"]
 

@@ -28,8 +28,11 @@ class QuestionItem(BaseModel):
     expected_key_points: List[str] = Field(default_factory=list)
     starter_code: Optional[Dict[str, str]] = None  # e.g. {"python": "def solve()...", "javascript": "..."}
     test_cases: List[TestCase] = Field(default_factory=list)
+    requires_whiteboard: bool = False
+    whiteboard_mode: Optional[Literal["none", "optional", "required"]] = "none"
     company_context: Optional[str] = None
     source_attribution: Optional[str] = None  # e.g., "LeetCode Discuss Google India 2024"
+    round_focus: Optional[str] = None  # e.g., "LP - Customer Obsession", "Frontend Architecture", "SQL Analytics"
 
 class QuestionBankRequest(BaseModel):
     company: str

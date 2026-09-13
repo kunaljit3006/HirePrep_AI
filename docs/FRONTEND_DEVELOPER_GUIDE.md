@@ -110,14 +110,32 @@ Top tech interviews do not allow candidates to copy-paste solutions from ChatGPT
 To make mock interviews feel real, candidates can speak their answers naturally rather than typing everything into a chat box.
 
 ### How does it behave?
-1. **Speech-to-Text (STT)**:
+1. **Azure Neural Voice Text-to-Speech (TTS)**:
+   - The backend randomly assigns a professional **Male or Female Interviewer Persona** per interview session with authentic accents (e.g. Indian English voices like **Priya Sharma** (`en-IN-NeerjaNeural`), **Prabhat Verma** (`en-IN-PrabhatNeural`), or Global voices like **Sarah Mitchell**, **David Chen**).
+   - Every AI interviewer message (`ai_question`, `ai_follow_up`, `ai_hint`, `ai_clarification`, `ai_diagram_critique`) arrives over WebSocket with high-fidelity `audio_base64` audio:
+     ```javascript
+     // Instant Audio Playback from WebSocket message:
+     if (data.audio_base64) {
+       const audio = new Audio("data:audio/mp3;base64," + data.audio_base64);
+       audio.play();
+       audio.onplay = () => setAvatarWaveformActive(true);
+       audio.onended = () => setAvatarWaveformActive(false);
+     } else {
+       // Graceful fallback to browser speech if audio is absent
+       window.speechSynthesis.speak(new SpeechSynthesisUtterance(data.content));
+     }
+     ```
+   - An interactive **Audio Waveform Visualizer** animates on the AI interviewer's avatar while audio is playing.
+
+2. **Interviewer Persona Display**:
+   - The interviewer card displays the assigned interviewer's avatar, full name, and executive title (e.g., *"Priya Sharma — Lead Distributed Systems Architect"* or *"Prabhat Verma — Principal Infrastructure Architect"*).
+
+3. **Speech-to-Text (STT) for Candidates**:
    - Uses the browser-native `SpeechRecognition` API.
    - While the candidate speaks, live interim text appears in their input bubble.
-   - When the candidate pauses or clicks `[Done Answering]`, the final transcript is sent to the backend.
-2. **Text-to-Speech (TTS)**:
-   - When the AI interviewer asks a question or follow-up, `window.speechSynthesis` speaks the question aloud using a natural, professional tone.
-   - An interactive **Audio Waveform Visualizer** animates on the AI interviewer's avatar while the AI is speaking.
-3. **Mute & Push-to-Talk Controls**:
+   - When the candidate pauses or clicks `[Done Answering]`, the final transcript is sent to the backend over the WebSocket.
+
+4. **Mute & Push-to-Talk Controls**:
    - Candidates can mute their microphone or switch to text chat at any time if they are in a noisy environment.
 
 ---
@@ -174,10 +192,20 @@ The candidate's personal preparation command center (`/dashboard`).
   - *Behavioral & Leadership*
   - *Communication Quality*
   - *Body Language & Eye Contact*
-* **Interview History Feed**:
-  - Cards for every past interview showing company logo, score (`88 / 100`), grade (`A`), date, and a direct `[View Feedback]` link.
-* **Preparation Streaks & Stats**:
-  - Total interview hours logged, questions answered, and integrity score average.
+* **Interview History Feed** (`GET /api/interview/history`):
+  - Every past interview item includes:
+    - `company` & `role`: (e.g., "Amazon", "Backend SDE II")
+    - `formatted_date`: Clean date string (e.g., **"Sep 03, 2026"**)
+    - `relative_time`: Human-readable relative time (e.g., **"9 days ago"**, **"Yesterday"**, **"2 hours ago"**, or **"Just now"**)
+    - `overall_score`: e.g. `88.0 / 100`
+    - `letter_grade`: e.g. `A`
+    - `hire_recommendation`: e.g. `Strong Hire`
+    - `feedback_id`: direct ID to navigate to `/feedback/[feedback_id]`
+* **Candidate Performance Analytics API** (`GET /api/feedback/analytics/summary`):
+  - `score_trends`: Array of `{ date: "Sep 03, 2026", relative_time: "9 days ago", overall_score: 88.0, company: "Amazon" }` for rendering progression line charts.
+  - `skills_radar`: Aggregated averages for DSA, System Design, Behavioral, Problem Solving, and Communication.
+  - `hire_recommendation_rate`: Percentage of interviews achieving a "Hire" or "Strong Hire" verdict.
+  - `top_recurring_strengths` & `top_recurring_weaknesses`: Key patterns across all past interviews.
 
 ---
 
@@ -214,13 +242,22 @@ After completing an interview, the candidate is routed to `/feedback/[id]`. This
 
 ### Message Flows:
 1. **Interview Start**:
-   - Server immediately pushes the first AI greeting and question:
+   - Server immediately pushes the first AI greeting and question with the assigned interviewer persona and high-fidelity audio:
      ```json
      {
        "type": "ai_question",
        "round_type": "behavioral",
        "question_idx": 0,
        "content": "Welcome to your Google mock interview! Let's begin...",
+       "audio_base64": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMA...",
+       "interviewer_persona": {
+         "name": "Priya Sharma",
+         "gender": "female",
+         "voice": "en-IN-NeerjaNeural",
+         "title": "Lead Distributed Systems Architect",
+         "accent": "Indian English",
+         "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Priya"
+       },
        "difficulty": "medium",
        "question": { "title": "...", "description": "..." }
      }

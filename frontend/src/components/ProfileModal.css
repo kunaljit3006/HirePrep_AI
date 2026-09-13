@@ -1,0 +1,268 @@
+/* ══════════════════════════════════════════════════════════════════
+   HirePrep_AI — Candidate Profile & User Management Modal
+   Theme: Frosted Glassmorphic Dark Obsidian + HackerRank Emerald (#00b853)
+   ══════════════════════════════════════════════════════════════════ */
+
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.profile-modal-container {
+  width: 100%;
+  max-width: 620px;
+  background: rgba(14, 14, 14, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 184, 83, 0.1);
+  overflow: hidden;
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Modal Header ───────────────────────────────────────────── */
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 8, 8, 0.45);
+}
+
+.profile-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-avatar-pill {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00b853 0%, #007a37 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 184, 83, 0.35);
+  flex-shrink: 0;
+}
+
+.profile-modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.profile-modal-subline {
+  font-size: 0.75rem;
+  color: #71717a;
+  margin: 2px 0 0 0;
+}
+
+.profile-close-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #a1a1aa;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.profile-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ── Banner ─────────────────────────────────────────────────── */
+.profile-banner {
+  padding: 10px 24px;
+  font-size: 0.813rem;
+  font-weight: 500;
+}
+
+.banner-success {
+  background: rgba(0, 184, 83, 0.12);
+  color: #00b853;
+  border-bottom: 1px solid rgba(0, 184, 83, 0.3);
+}
+
+.banner-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ── Form Body ──────────────────────────────────────────────── */
+.profile-form {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a1a1aa;
+  letter-spacing: 0.01em;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: #ffffff;
+  background: rgba(8, 8, 8, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.profile-input:focus {
+  background: rgba(12, 12, 12, 0.7);
+  border-color: #00b853;
+  box-shadow: 0 0 0 2px rgba(0, 184, 83, 0.2);
+}
+
+.profile-select {
+  cursor: pointer;
+}
+
+.profile-select option {
+  background: #141414;
+  color: #ffffff;
+}
+
+/* ── Section Divider ────────────────────────────────────────── */
+.profile-section-divider {
+  display: flex;
+  align-items: center;
+  margin: 6px 0 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+
+.profile-divider-text {
+  font-size: 0.688rem;
+  letter-spacing: 0.06em;
+  color: #00b853;
+  font-weight: 600;
+}
+
+.profile-handles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.profile-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  font-size: 0.813rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn-save {
+  padding: 9px 20px;
+  border-radius: 8px;
+  background: #00b853;
+  border: none;
+  color: #ffffff;
+  font-size: 0.813rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 184, 83, 0.35);
+}
+
+.btn-save:hover {
+  background: #009e47;
+  box-shadow: 0 6px 18px rgba(0, 184, 83, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}

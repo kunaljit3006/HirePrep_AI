@@ -1,0 +1,225 @@
+/* ══════════════════════════════════════════════════════════════════
+   Analytics & Telemetry Modal Styles
+   ══════════════════════════════════════════════════════════════════ */
+
+.analytics-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.analytics-modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 184, 83, 0.25);
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.analytics-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: #121212;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.analytics-badge {
+  font-size: 0.68rem;
+  color: #00b853;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.analytics-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.analytics-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.analytics-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
+.analytics-modal-body {
+  padding: 20px 24px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Metrics Grid */
+.analytics-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .analytics-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.metric-box {
+  background: #131313;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.metric-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #00b853;
+}
+
+.metric-lbl {
+  font-size: 0.68rem;
+  color: #71717a;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Section */
+.analytics-section {
+  background: #131313;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.section-title {
+  font-size: 0.72rem;
+  color: #00b853;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.competency-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.competency-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.comp-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #e4e4e7;
+}
+
+.comp-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.comp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #009e47, #00b853);
+  border-radius: 9999px;
+  transition: width 0.6s ease;
+}
+
+/* Strengths & Weaknesses */
+.strengths-weaknesses-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .strengths-weaknesses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feedback-column {
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.strengths-box {
+  background: rgba(0, 184, 83, 0.06);
+  border: 1px solid rgba(0, 184, 83, 0.2);
+}
+
+.strengths-box .column-title {
+  color: #00b853;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.weaknesses-box {
+  background: rgba(234, 179, 8, 0.06);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.weaknesses-box .column-title {
+  color: #eab308;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.feedback-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #d4d4d8;
+  line-height: 1.4;
+}

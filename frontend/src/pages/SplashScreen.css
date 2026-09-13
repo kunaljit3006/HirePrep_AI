@@ -1,0 +1,188 @@
+/* ══════════════════════════════════════════════════════════════════
+   HirePrep_AI — Modern Animated Splash Screen
+   Theme: Pure Black + Dark HackerRank Emerald (#00b853)
+   ══════════════════════════════════════════════════════════════════ */
+
+.splash-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background-color: #070707;
+  overflow: hidden;
+}
+
+.splash-skip-btn {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 20;
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid #222222;
+  border-radius: 6px;
+  color: #71717a;
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.splash-skip-btn:hover {
+  color: #00b853;
+  border-color: #00b853;
+  background: rgba(0, 184, 83, 0.08);
+}
+
+.splash-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ── Dreamy Ambient Pulsing Emerald Glow ────────────────────── */
+.splash-glow-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -65%);
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 184, 83, 0.16) 0%, rgba(0, 184, 83, 0.04) 45%, transparent 70%);
+  animation: pulse-glow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Brand Logo & Aura ──────────────────────────────────────── */
+.splash-logo-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-logo-aura {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(ellipse at center, rgba(0, 184, 83, 0.18) 0%, transparent 65%);
+  filter: blur(20px);
+  pointer-events: none;
+  animation: aura-expand 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes aura-expand {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.splash-logo {
+  width: clamp(260px, 38vw, 420px);
+  height: auto;
+  filter: drop-shadow(0 0 35px rgba(0, 184, 83, 0.35));
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Typewriter Motto ───────────────────────────────────────── */
+.splash-motto-wrapper {
+  min-height: 28px;
+}
+
+.splash-motto {
+  font-size: clamp(0.813rem, 1.4vw, 1.05rem);
+  color: #a1a1aa;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.splash-cursor {
+  display: inline-block;
+  color: #00b853;
+  animation: typewriter-blink 0.7s step-end infinite;
+  margin-left: 2px;
+  font-weight: 300;
+}
+
+/* ── Live Audio Equalizer Bars ──────────────────────────────── */
+.splash-equalizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+  margin-top: -6px;
+}
+
+.eq-bar {
+  width: 3px;
+  border-radius: 3px;
+  background: #00b853;
+  animation: eq-bounce 0.8s ease-in-out infinite alternate;
+}
+
+.eq-1 { height: 6px; animation-delay: 0.1s; }
+.eq-2 { height: 14px; animation-delay: 0.25s; }
+.eq-3 { height: 20px; animation-delay: 0.05s; }
+.eq-4 { height: 12px; animation-delay: 0.4s; }
+.eq-5 { height: 18px; animation-delay: 0.18s; }
+.eq-6 { height: 8px; animation-delay: 0.35s; }
+.eq-7 { height: 15px; animation-delay: 0.12s; }
+
+@keyframes eq-bounce {
+  0% { transform: scaleY(0.3); opacity: 0.4; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ── Terminal Status & Progress Bar ─────────────────────────── */
+.splash-terminal-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 10px;
+}
+
+.splash-log-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.688rem;
+  color: #71717a;
+}
+
+.splash-log-text {
+  color: #a1a1aa;
+}
+
+.splash-progress-track {
+  width: 100%;
+  height: 3px;
+  background: #181818;
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.splash-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00b853, #00ea64);
+  box-shadow: 0 0 10px rgba(0, 184, 83, 0.6);
+  border-radius: 9999px;
+  transition: width 0.1s ease-out;
+}
+
+.splash-percent {
+  font-size: 0.688rem;
+  font-weight: 600;
+  color: #00b853;
+  letter-spacing: 0.04em;
+}

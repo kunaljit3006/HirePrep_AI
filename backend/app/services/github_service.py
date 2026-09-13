@@ -3,6 +3,7 @@ import logging
 from typing import Optional, List
 from app.config import settings
 from app.models.profile import GitHubData, GitHubRepo
+from app.services.cache_service import cache_service
 
 logger = logging.getLogger("hireprep.github")
 
@@ -51,6 +52,13 @@ class GitHubService:
         username = cls.extract_username(url_or_handle)
         if not username:
             return None
+
+        # Check Redis/in-memory cache (12h TTL)
+        cache_key = cache_service.profile_key("github", username)
+        cached = await cache_service.get_json(cache_key)
+        if cached:
+            logger.info(f"Cache HIT: Returning cached GitHub profile for {username}")
+            return GitHubData(**cached)
 
         headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "HirePrep-AI-Bot"}
         if settings.GITHUB_TOKEN:
@@ -117,7 +125,7 @@ class GitHubService:
                             file_tree=codebase.get("file_tree", [])
                         ))
 
-                return GitHubData(
+                res_data = GitHubData(
                     username=username,
                     avatar_url=user_info.get("avatar_url"),
                     public_repos=user_info.get("public_repos", len(repos)),
@@ -127,14 +135,18 @@ class GitHubService:
                     total_stars=total_stars,
                     bio=user_info.get("bio")
                 )
+                await cache_service.set_json(cache_key, res_data.model_dump(), ttl_seconds=cache_service.PROFILE_TTL)
+                return res_data
         except Exception as e:
             logger.warning(f"Error fetching GitHub profile for {username}: {e}")
-            return GitHubData(
+            fallback_data = GitHubData(
                 username=username,
                 public_repos=2,
                 top_languages=["Python", "TypeScript"],
                 total_stars=3,
                 bio="GitHub profile referenced in resume."
             )
+            await cache_service.set_json(cache_key, fallback_data.model_dump(), ttl_seconds=3600)
+            return fallback_data
 
 github_service = GitHubService()

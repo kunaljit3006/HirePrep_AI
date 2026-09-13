@@ -66,7 +66,11 @@ async def feedback_generator_node(state: InterviewState) -> Dict[str, Any]:
         role=role,
         transcript=transcript,
         violations=violations,
-        body_language_samples=body_samples
+        body_language_samples=body_samples,
+        score_history=state.get("score_history", []),
+        concept_gaps=state.get("concept_gaps", []),
+        candidate_strengths=state.get("candidate_strengths", []),
+        topics_covered=state.get("topics_covered", [])
     )
 
     logger.info(f"Feedback report generated for interview {interview_id}. Overall Score: {report.overall_score}")

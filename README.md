@@ -1,63 +1,150 @@
-<p align="center">
-  <img src="./assets/banner.png" alt="HirePrep_AI" width="100%" />
-</p>
+# HirePrep AI 🚀
 
-> Autonomous Multi-Agent AI Mock Interview Platform powered by **FastAPI** and **LangGraph**.
-
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-orange.svg)](https://github.com/langchain-ai/langgraph)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+HirePrep AI is a state-of-the-art **Autonomous Multi-Agent Mock Interview Platform** designed to simulate real-world, high-bar technical interviews. Driven by a LangGraph multi-agent backend, the platform dynamically tailors its questions, difficulty, and follow-ups based on the candidate's resume, coding profiles (GitHub, LeetCode, Codeforces), and real-time performance.
 
 ---
 
-## 💡 Overview
-
-HirePrep_AI prepares tech candidates for technical interviews by simulating real 30-minute interviews tailored to their **specific company, role, location, and actual projects**:
-
-1. **Resume Parser Agent**: Extracts skills, projects, and detects coding profiles (GitHub, LeetCode, Codeforces, Kaggle, CodeChef, HackerRank).
-2. **Selective Profile Scraper Agent**: Scrapes **ONLY** coding profiles found in the resume, plus inspects repository **codebases (file tree & README)**.
-3. **Question Researcher Agent**: Gathers real-world interview intelligence in parallel across **Reddit**, **LeetCode Discuss**, **HackerNews**, **GitHub Repos**, and **GeeksforGeeks Archives**.
-4. **Interview Conductor Agent (Real-time WebSocket)**: Delivers questions, evaluates candidate speech-to-text, receives **Camera Body Language Telemetry** (eye contact %, confidence), and monitors **Anti-Cheat Monaco Code Editor** events (tab-switches, copy-paste attempts).
-5. **Feedback Generator Agent**: Publishes detailed scoring (0-100, letter grade `A+` to `F`), section scores, body language evaluation, anti-cheat integrity scores, and a personalized 14-day study roadmap.
+## 🌟 Key Features
+- **Dynamic Multi-Agent Backend:** Orchestrates multiple specialized AI agents (Resume Parser, Web Researcher, Interview Conductor, Evaluator, and Feedback Generator) using LangGraph to create an unscripted, adaptive interview flow.
+- **Resume-Grounded Questions:** Extracts skills and past projects from your uploaded resume to conduct highly contextual "deep dive" behavioral and architectural rounds.
+- **Real-Time Coaching & Empathy:** The Interview Conductor tracks elapsed time, detects emotional struggles, catches logic/calculation errors mid-thought, and can politely redirect you from tangents—just like a real human Senior Engineer.
+- **Web Intelligence Scraping:** The system dynamically scrapes the web for company-specific interview constraints, ensuring questions align with the target company's current architecture and values (e.g., Amazon Leadership Principles).
+- **Proctoring & Anti-Cheat:** Integrates a front-end computer vision and event-tracking system to detect tab switches, copy-paste attempts, and evaluate candidate eye contact and confidence.
+- **Interactive Whiteboard & Code Execution:** Features a live React-Flow whiteboard for system design and an AST-based Python code execution sandbox.
+- **Comprehensive 14-Day Roadmap:** Generates an actionable, personalized improvement roadmap based on specific concept gaps identified during the mock interview.
 
 ---
 
-## 🏛️ Repository Structure
+## 🏗 High-Level Architecture
+
+The platform operates on a robust client-server architecture:
+
+1. **Frontend (Vite + React + TailwindCSS):** 
+   A high-performance Single Page Application (SPA) providing real-time WebRTC audio visualization, React-Flow diagramming, Monaco Editor for coding, and WebSocket integration for low-latency interview interactions.
+   
+2. **Backend (FastAPI + LangGraph):** 
+   An asynchronous, event-driven Python backend utilizing WebSockets for duplex communication. LangGraph manages the state machine and routes context between five specialized AI agents.
+
+---
+
+## 🧠 Low-Level Agent Architecture (LangGraph)
+
+The core intelligence is powered by a cyclic graph of specialized agents operating on a shared `InterviewState`:
+
+- **Agent 1: Resume Parser:** Ingests PDF/DOCX resumes, extracting experience levels, project tech stacks, and coding profile links.
+- **Agent 2: Profile Aggregator:** Asynchronously scrapes GitHub, LeetCode, and Codeforces to synthesize a candidate capability profile.
+- **Agent 3: Question Researcher:** Uses Tavily search to pull real-time company engineering blogs and recent interview reports to ground question generation.
+- **Agent 4: Interview Conductor:** The "Human Interface". Manages conversational bridging, empathy, time awareness, Reverse Q&A, and delivers adaptive hints.
+- **Agent 5: Response Evaluator:** Analyzes candidate intent (Hint Request, Clarification, Answer). Grades depth, identifies concept gaps, enforces the STAR behavioral framework, and provides live logic correction.
+- **Agent 6: Feedback Generator:** Compiles the holistic performance data into a detailed rubric, combining integrity scores, camera metrics, and LLM-synthesized roadmaps.
+
+---
+
+## 📂 Project Structure
 
 ```
 HirePrep_AI/
-├── backend/                     # FastAPI + LangGraph Backend
+├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app & real-time WebSocket server
-│   │   ├── config.py            # Pydantic Settings
-│   │   ├── dependencies.py      # Decoupled user context (ready for Auth)
-│   │   ├── models/              # Pydantic data schemas
-│   │   ├── db/                  # Async SQLAlchemy models & SQLite/PostgreSQL connection
-│   │   ├── services/            # LLM router, scrapers, question engine, sandboxed code runner
-│   │   ├── graph/               # LangGraph multi-agent supervisor graph & nodes
-│   │   └── routes/              # REST endpoints & WebSocket interview streaming
-│   ├── tests/                   # Complete test suite (11/11 passing)
-│   ├── requirements.txt
-│   └── README.md
-├── .gitignore
-└── README.md
+│   │   ├── graph/           # LangGraph Agent Nodes and State Definitions
+│   │   ├── models/          # Pydantic Schemas for validation
+│   │   ├── routes/          # FastAPI REST and WebSocket Endpoints
+│   │   ├── services/        # Business Logic (LLMs, Scrapers, AST execution)
+│   │   ├── utils/           # Helper utilities
+│   │   ├── main.py          # FastAPI Application Entrypoint
+│   │   └── config.py        # Environment Configuration
+│   ├── tests/               # Pytest Unit and Integration Tests
+│   └── requirements.txt     # Python Dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # Reusable React UI Components
+│   │   ├── lib/             # Supabase Config and API wrappers
+│   │   ├── pages/           # Route Pages (Dashboard, InterviewRoom, etc.)
+│   │   ├── styles/          # Vanilla CSS and Design System variables
+│   │   └── App.jsx          # React Router Setup
+│   ├── package.json         # NPM Dependencies
+│   └── vite.config.js       # Vite Bundler Configuration
+└── README.md                # You are here!
 ```
 
 ---
 
-## 🚀 Quickstart (Backend)
+## 🚀 Setup & Run Instructions
 
-```bash
-cd backend
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux / macOS
-source venv/bin/activate
+### Prerequisites
+- Node.js (v18+)
+- Python (3.10+)
+- LLM API Keys (OpenAI / Anthropic / Groq)
+- Supabase Account (for Auth and Database)
 
-pip install -r requirements.txt
-pytest -v tests
-uvicorn app.main:app --reload --port 8000
-```
-Interactive API Swagger Docs: `http://localhost:8000/docs`
+### 1. Backend Setup
+
+1. **Navigate to the backend directory:**
+   ```bash
+   cd backend
+   ```
+2. **Create a virtual environment and install dependencies:**
+   ```bash
+   python -m venv venv
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. **Configure Environment Variables:**
+   Copy `.env.example` to `.env` and fill in your API keys (e.g., `OPENAI_API_KEY`, `TAVILY_API_KEY`).
+4. **Run the FastAPI Server:**
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+### 2. Frontend Setup
+
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Configure Environment Variables:**
+   Create a `.env` file in the `frontend` folder containing your Supabase URL and Anon Key:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_anon_key
+   VITE_API_URL=http://localhost:8000
+   ```
+4. **Start the Vite Development Server:**
+   ```bash
+   npm run dev
+   ```
+
+You can now navigate to `http://localhost:5173` to access the HirePrep AI application!
+
+---
+
+## 📄 License
+
+MIT License
+
+Copyright (c) 2026 HirePrep AI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

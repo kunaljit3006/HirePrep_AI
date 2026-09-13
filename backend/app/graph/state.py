@@ -9,6 +9,7 @@ class InterviewState(TypedDict):
     resume_bytes: Optional[bytes]
     resume_filename: Optional[str]
     resume_data: Optional[Dict[str, Any]]
+    candidate_name: Optional[str]
     detected_profile_links: Optional[Dict[str, str]]
     scraped_profiles: Optional[Dict[str, Any]]
 
@@ -39,6 +40,11 @@ class InterviewState(TypedDict):
     hints_given: List[str]  # History of hints provided to the candidate
     is_approach_check: Optional[bool]  # True if candidate shared an in-progress thought/approach check
     track_status: Optional[str]  # "on_track" | "partially_on_track" | "off_track"
+    preferred_coding_language: Optional[str]  # e.g. "python", "sql", "java", "cpp", "javascript"
+    awaiting_language_preference: Optional[bool]  # True when interviewer asked candidate for their preferred language
+    is_warmup_turn: Optional[bool]  # True during opening self-introduction & rapport building
+    is_thinking_pause: Optional[bool]  # True if candidate requested thinking time (e.g. "let me think")
+    is_qa_wrapup: Optional[bool]  # True during closing reverse Q&A stage
 
     # Anti-Cheat, Camera Body Language & Speech Clarity Telemetry
     violations: List[Dict[str, Any]]
@@ -46,6 +52,24 @@ class InterviewState(TypedDict):
     speech_clarity_metrics: Optional[Dict[str, Any]]  # Filler word counts, pacing, WPM
     code_submissions: List[Dict[str, Any]]
 
+    # Architecture Diagram & Whiteboard (System Design)
+    diagram_data: Optional[Dict[str, Any]]  # {"components": [...], "connections": [...], "snapshot_url": str}
+    diagram_critique: Optional[Dict[str, Any]]  # {"score": float, "spof_risks": [...], "bottlenecks": [...]}
+    is_diagram_submission: Optional[bool]
+
     # Pipeline Phase & Report Output
     phase: Literal["setup", "scrape", "prep", "interview", "awaiting_candidate", "evaluate", "feedback", "done"]
     feedback_report: Optional[Dict[str, Any]]
+
+    # Dynamic Question Adaptation (Real-time interview flow)
+    answer_depth: Optional[str]  # "shallow" | "adequate" | "deep"
+    concept_gaps: List[str]  # Concepts the candidate was weak on
+    candidate_strengths: List[str]  # Demonstrated mastery areas
+    next_question_guidance: Optional[str]  # LLM-generated instruction for next question
+    web_intel_context: Optional[str]  # Cached web intelligence for conductor
+    cumulative_performance: Optional[str]  # "struggling" | "average" | "excelling"
+    questions_asked_count: int  # How many questions have actually been asked
+    interview_structure_notes: Optional[str]  # Company-specific interview notes from web intel
+    score_history: List[Dict[str, Any]]  # Per-question score records for feedback breakdown
+    topics_covered: List[str]  # Topics already discussed to avoid repetition
+

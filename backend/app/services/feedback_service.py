@@ -5,7 +5,8 @@ import logging
 from typing import List, Dict, Any, Optional
 from app.models.feedback import (
     FeedbackReportResponse, SectionScore, CommunicationMetrics,
-    CameraBodyLanguageReport, CodeQualityReport, RoadmapDay
+    CameraBodyLanguageReport, CodeQualityReport, RoadmapDay,
+    SystemDesignArchitectureReport
 )
 from app.models.proctoring import ProctoringSummary, ProctoringViolation, BodyLanguageSample
 from app.models.interview import InterviewMessage, CodeSubmissionResult
@@ -24,7 +25,13 @@ class FeedbackService:
         transcript: List[InterviewMessage],
         violations: List[ProctoringViolation],
         body_language_samples: List[BodyLanguageSample],
-        code_results: Optional[List[CodeSubmissionResult]] = None
+        code_results: Optional[List[CodeSubmissionResult]] = None,
+        architecture_diagram: Optional[Dict[str, Any]] = None,
+        architecture_critique: Optional[Dict[str, Any]] = None,
+        score_history: Optional[List[Dict[str, Any]]] = None,
+        concept_gaps: Optional[List[str]] = None,
+        candidate_strengths: Optional[List[str]] = None,
+        topics_covered: Optional[List[str]] = None
     ) -> FeedbackReportResponse:
         """
         Synthesizes candidate interview transcript, camera telemetry,
@@ -80,11 +87,22 @@ class FeedbackService:
 
         # 3. LLM Prompt for Deep Transcript Evaluation
         formatted_dialogue = "\n".join([f"{m.role.upper()}: {m.content}" for m in transcript[-20:]])
+        score_context = ""
+        if score_history:
+            score_context += "Question Scores:\n"
+            for s in score_history:
+                score_context += f"- Round: {s.get('round_type', 'unknown')}, Score: {s.get('score', 0)}, Topic: {s.get('topic', '')}, Depth: {s.get('answer_depth', 'adequate')}\n"
+        if concept_gaps:
+            score_context += f"Concept Gaps: {', '.join(concept_gaps)}\n"
+        if candidate_strengths:
+            score_context += f"Demonstrated Strengths: {', '.join(candidate_strengths)}\n"
+
         prompt = (
             f"You are the Bar Raiser / Hiring Committee Lead evaluating a candidate's mock interview at {company} for '{role}'.\n"
             f"Interview Transcript:\n{formatted_dialogue}\n\n"
             f"Proctoring Integrity Score: {proctoring_summary.integrity_score} / 100\n"
             f"Camera Eye Contact: {body_language_report.eye_contact_percentage}%\n\n"
+            f"Performance Telemetry:\n{score_context}\n\n"
             "Generate an in-depth evaluation in JSON format matching this schema:\n"
             "{\n"
             '  "overall_score": float (0-100),\n'
@@ -94,8 +112,27 @@ class FeedbackService:
             '  "filler_words": [string],\n'
             '  "top_strengths": [string],\n'
             '  "top_weaknesses": [string],\n'
-            '  "detailed_summary": string\n'
+            '  "detailed_summary": string,\n'
+            '  "section_scores": [\n'
+            '    {\n'
+            '      "section_name": string (e.g., "Problem Solving & Coding", "Behavioral & Leadership", "System Design"),\n'
+            '      "score": float (0-100),\n'
+            '      "weight": float (e.g., 0.35),\n'
+            '      "strengths": [string],\n'
+            '      "weaknesses": [string],\n'
+            '      "feedback": string\n'
+            '    }\n'
+            '  ],\n'
+            '  "roadmap": [\n'
+            '    {\n'
+            '      "day": int (1, 2, 3, etc up to 14),\n'
+            '      "focus_topic": string,\n'
+            '      "action_items": [string],\n'
+            '      "curated_resources": [{"title": string, "url": string}]\n'
+            '    }\n'
+            '  ]\n'
             "}\n"
+            "NOTE: Ensure the sum of section weights equals 1.0. Generate a strict 14-day roadmap focusing on the candidate's concept_gaps. Use reputable URLs (leetcode.com, bytebytego.com, neetcode.io, etc) for resources.\n"
             "Return pure JSON without markdown backticks."
         )
 
@@ -130,40 +167,29 @@ class FeedbackService:
             }
 
         # 4. Section Scores Breakdown
-        section_scores = [
-            SectionScore(
-                section_name="Problem Solving & Coding",
-                score=85.0,
-                weight=0.35,
-                strengths=["Optimal time complexity analysis", "Clean function decomposition"],
-                weaknesses=["Could test edge cases with empty arrays earlier"],
-                feedback="Demonstrated sound algorithmic intuition with clean code syntax."
-            ),
-            SectionScore(
-                section_name="System Design & Architecture",
-                score=82.0,
-                weight=0.25,
-                strengths=["Good understanding of message queues and horizontal scaling"],
-                weaknesses=["Cache invalidation edge cases could be elaborated further"],
-                feedback="Demonstrated good distributed systems fundamentals appropriate for the role level."
-            ),
-            SectionScore(
-                section_name="Resume & Project Experience",
-                score=88.0,
-                weight=0.20,
-                strengths=["Deep technical command over projects listed in resume"],
-                weaknesses=["Quantify business impact metrics more explicitly"],
-                feedback="Clearly explained technical trade-offs in projects and demonstrated authentic ownership."
-            ),
-            SectionScore(
-                section_name="Behavioral & Leadership",
-                score=81.0,
-                weight=0.20,
-                strengths=["Clear STAR format adherence", "Customer-first mindset"],
-                weaknesses=["Keep initial situation background more concise"],
-                feedback="Answers demonstrated maturity, accountability, and strong peer collaboration."
-            )
-        ]
+        raw_sections = eval_data.get("section_scores", [])
+        section_scores = []
+        if raw_sections:
+            for sec in raw_sections:
+                section_scores.append(SectionScore(
+                    section_name=sec.get("section_name", "Technical Round"),
+                    score=float(sec.get("score", 85.0)),
+                    weight=float(sec.get("weight", 0.25)),
+                    strengths=sec.get("strengths", []),
+                    weaknesses=sec.get("weaknesses", []),
+                    feedback=sec.get("feedback", "")
+                ))
+        else:
+            section_scores = [
+                SectionScore(
+                    section_name="General Technical Competence",
+                    score=float(eval_data.get("overall_score", 85.0)),
+                    weight=1.0,
+                    strengths=eval_data.get("top_strengths", []),
+                    weaknesses=eval_data.get("top_weaknesses", []),
+                    feedback="Generated from legacy fallback."
+                )
+            ]
 
         communication = CommunicationMetrics(
             clarity_score=85.0,
@@ -183,44 +209,67 @@ class FeedbackService:
         )
 
         # 5. Personalized 14-Day Roadmap
-        roadmap = [
-            RoadmapDay(
-                day=1,
-                focus_topic="Two Pointers & Sliding Window Mastery",
-                action_items=["Solve 4 medium LeetCode questions focusing on 2-pointer patterns.", "Practice narrating your approach out loud before typing."],
-                curated_resources=[{"title": "NeetCode Two Pointer Roadmap", "url": "https://neetcode.io/roadmap"}]
-            ),
-            RoadmapDay(
-                day=2,
-                focus_topic="Prefix Sums & Hash Map Invariants",
-                action_items=["Review Subarray Sum Equals K and Continuous Subarray Sum.", "Write edge case test suites before writing implementation."],
-                curated_resources=[{"title": "LeetCode Discuss Pattern Guide", "url": "https://leetcode.com/discuss"}]
-            ),
-            RoadmapDay(
-                day=3,
-                focus_topic="Distributed Caching & Redis Eviction",
-                action_items=["Study Cache-Aside, Write-Through, and Write-Back patterns.", "Review Redis TTL and LRU/LFU memory policies."],
-                curated_resources=[{"title": "ByteByteGo Caching Deep-Dive", "url": "https://bytebytego.com"}]
-            ),
-            RoadmapDay(
-                day=4,
-                focus_topic="Message Queues & Event-Driven Architecture",
-                action_items=["Compare Kafka log-based partitions vs RabbitMQ AMQP.", "Design an idempotent webhook handler."],
-                curated_resources=[{"title": "Designing Data-Intensive Applications Ch. 11", "url": "https://dataintensive.net"}]
-            ),
-            RoadmapDay(
-                day=7,
-                focus_topic="Mid-Prep Mock Interview Checkpoint",
-                action_items=["Run another 30-min HirePrep_AI mock interview with camera active.", "Review eye contact and posture metrics."],
-                curated_resources=[{"title": "HirePrep_AI Practice Session", "url": "/interview"}]
-            ),
-            RoadmapDay(
-                day=14,
-                focus_topic="Final Company-Specific Behavioral & System Design Polish",
-                action_items=[f"Finalize 5 STAR stories tailored to {company}'s leadership principles.", "Perform final end-to-end rehearsal."],
-                curated_resources=[{"title": f"{company} Interview Prep Hub", "url": "https://glassdoor.com"}]
+        raw_roadmap = eval_data.get("roadmap", [])
+        roadmap = []
+        if raw_roadmap:
+            for day in raw_roadmap:
+                roadmap.append(RoadmapDay(
+                    day=int(day.get("day", 1)),
+                    focus_topic=day.get("focus_topic", "Technical Polish"),
+                    action_items=day.get("action_items", []),
+                    curated_resources=day.get("curated_resources", [])
+                ))
+        else:
+            roadmap = [
+                RoadmapDay(
+                    day=1,
+                    focus_topic="Review Core Concepts",
+                    action_items=["Review the gaps identified during the interview."],
+                    curated_resources=[{"title": "NeetCode Roadmap", "url": "https://neetcode.io/roadmap"}]
+                )
+            ]
+
+        # Architecture Report Synthesis (if candidate submitted a whiteboard diagram)
+        arch_report = None
+        if architecture_critique or architecture_diagram:
+            critique = architecture_critique or {}
+            components = (architecture_diagram or {}).get("components", []) if isinstance(architecture_diagram, dict) else []
+            spofs = critique.get("spof_risks") or []
+            bottlenecks = critique.get("bottlenecks") or []
+            strengths = critique.get("strengths") or []
+
+            comp_types = [str(c.get("type", "")).lower() for c in components if isinstance(c, dict)]
+            has_lb = any("balancer" in t or "load" in t or "gateway" in t for t in comp_types)
+            has_cache = any("cache" in t or "redis" in t for t in comp_types)
+
+            if spofs:
+                fault_tol = "Single Point of Failure Detected"
+            elif has_lb and has_cache:
+                fault_tol = "High Availability"
+            else:
+                fault_tol = "Partial Redundancy"
+
+            if len(components) >= 4 and has_lb and has_cache:
+                scalability = "High"
+            elif len(components) >= 2:
+                scalability = "Moderate"
+            else:
+                scalability = "Low"
+
+            arch_score = float(critique.get("score", 85.0 if not spofs else 68.0))
+            feedback_text = critique.get("critique") or "System design demonstrates clear component decoupling and scalability awareness."
+            snapshot_url = (architecture_diagram or {}).get("snapshot_url") if isinstance(architecture_diagram, dict) else None
+
+            arch_report = SystemDesignArchitectureReport(
+                architecture_score=round(arch_score, 1),
+                scalability_rating=scalability,
+                fault_tolerance=fault_tol,
+                spof_risks=spofs,
+                bottlenecks=bottlenecks,
+                strengths=strengths if strengths else ["Good modular separation between client, services, and storage"],
+                feedback=feedback_text,
+                diagram_snapshot_url=snapshot_url
             )
-        ]
 
         return FeedbackReportResponse(
             feedback_id=f"fb-{uuid.uuid4().hex[:10]}",
@@ -233,6 +282,7 @@ class FeedbackService:
             communication=communication,
             body_language=body_language_report,
             code_quality=code_quality,
+            architecture_report=arch_report,
             proctoring=proctoring_summary,
             top_strengths=eval_data.get("top_strengths", []),
             top_weaknesses=eval_data.get("top_weaknesses", []),

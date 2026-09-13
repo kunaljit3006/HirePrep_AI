@@ -8,11 +8,14 @@ from app.db.connection import get_db
 from app.db.models import FeedbackReportModel, InterviewModel, InterviewMessageModel, ProctoringViolationModel
 from app.models.feedback import (
     FeedbackReportResponse, SectionScore, CommunicationMetrics,
-    CameraBodyLanguageReport, CodeQualityReport, RoadmapDay
+    CameraBodyLanguageReport, CodeQualityReport, RoadmapDay,
+    CandidateAnalyticsOverview, PerformanceTrendPoint, SkillsRadarAverage,
+    SystemDesignArchitectureReport
 )
 from app.models.proctoring import ProctoringSummary, ProctoringViolation, BodyLanguageSample
 from app.models.interview import InterviewMessage
 from app.services.feedback_service import feedback_service
+from app.utils.date_utils import format_relative_time, format_friendly_date
 
 router = APIRouter(prefix="/api/feedback", tags=["Feedback & Analytics"])
 
@@ -23,6 +26,11 @@ def build_feedback_response(db_fb: FeedbackReportModel) -> FeedbackReportRespons
     code_quality = CodeQualityReport(**db_fb.code_quality) if db_fb.code_quality else None
     proctoring = ProctoringSummary(**db_fb.proctoring)
     roadmap = [RoadmapDay(**r) for r in db_fb.roadmap]
+    architecture_report = (
+        SystemDesignArchitectureReport(**db_fb.architecture_report)
+        if getattr(db_fb, "architecture_report", None)
+        else None
+    )
 
     return FeedbackReportResponse(
         feedback_id=db_fb.id,
@@ -35,12 +43,146 @@ def build_feedback_response(db_fb: FeedbackReportModel) -> FeedbackReportRespons
         communication=communication,
         body_language=body_language,
         code_quality=code_quality,
+        architecture_report=architecture_report,
         proctoring=proctoring,
         top_strengths=db_fb.strengths,
         top_weaknesses=db_fb.weaknesses,
         improvement_roadmap_14_days=roadmap,
         detailed_summary=db_fb.summary,
-        created_at=db_fb.created_at.isoformat()
+        created_at=db_fb.created_at.isoformat(),
+        formatted_date=format_friendly_date(db_fb.created_at),
+        relative_time=format_relative_time(db_fb.created_at)
+    )
+
+@router.get("/user/history", response_model=List[FeedbackReportResponse])
+async def get_user_feedback_history(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve past feedback reports for the current user."""
+    stmt = select(FeedbackReportModel).where(FeedbackReportModel.user_id == user_id).order_by(FeedbackReportModel.created_at.desc())
+    res = await db.execute(stmt)
+    records = res.scalars().all()
+    return [build_feedback_response(r) for r in records]
+
+@router.get("/analytics/summary", response_model=CandidateAnalyticsOverview)
+async def get_candidate_analytics_summary(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Returns aggregated performance analytics for the authenticated candidate:
+    - Score trends over time (for progression charts)
+    - Radar skill breakdown (DSA, System Design, Behavioral, Problem Solving, Communication)
+    - Hiring recommendation rate
+    - Top recurring strengths and weaknesses
+    """
+    stmt = (
+        select(InterviewModel, FeedbackReportModel)
+        .outerjoin(FeedbackReportModel, InterviewModel.id == FeedbackReportModel.interview_id)
+        .where(InterviewModel.user_id == user_id)
+        .order_by(InterviewModel.created_at.asc())
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+
+    total_interviews = len(rows)
+    completed = [r for r in rows if r[0].status == "completed" and r[1] is not None]
+
+    if not completed:
+        return CandidateAnalyticsOverview(
+            user_id=user_id,
+            total_interviews_taken=total_interviews,
+            completed_interviews=0,
+            average_score=0.0,
+            highest_score=0.0,
+            lowest_score=0.0,
+            hire_recommendation_rate=0.0,
+            score_trends=[],
+            skills_radar=SkillsRadarAverage(
+                dsa_score=0.0,
+                system_design_score=0.0,
+                behavioral_score=0.0,
+                problem_solving_score=0.0,
+                communication_score=0.0
+            ),
+            top_recurring_strengths=[],
+            top_recurring_weaknesses=[]
+        )
+
+    scores = [fb.overall_score for _, fb in completed]
+    highest = max(scores)
+    lowest = min(scores)
+    avg_score = sum(scores) / len(scores)
+
+    hires = sum(1 for _, fb in completed if fb.hire_recommendation in ["Hire", "Strong Hire"])
+    hire_rate = round((hires / len(completed)) * 100.0, 1)
+
+    trends = []
+    for intv, fb in completed:
+        trends.append(PerformanceTrendPoint(
+            interview_id=intv.id,
+            date=format_friendly_date(intv.created_at),
+            relative_time=format_relative_time(intv.created_at),
+            company=intv.company,
+            role=intv.role,
+            overall_score=fb.overall_score,
+            letter_grade=fb.letter_grade,
+            hire_recommendation=fb.hire_recommendation
+        ))
+
+    dsa_scores, sys_scores, beh_scores, prob_scores, comm_scores = [], [], [], [], []
+    all_strengths, all_weaknesses = [], []
+
+    for _, fb in completed:
+        if fb.strengths:
+            all_strengths.extend(fb.strengths)
+        if fb.weaknesses:
+            all_weaknesses.extend(fb.weaknesses)
+
+        if fb.communication and isinstance(fb.communication, dict) and "clarity_score" in fb.communication:
+            comm_scores.append(float(fb.communication["clarity_score"]))
+
+        for sec in (fb.section_scores or []):
+            if isinstance(sec, dict):
+                name = sec.get("section_name", "").lower()
+                s_val = float(sec.get("score", 75.0))
+                if "dsa" in name or "algorithm" in name or "data structure" in name:
+                    dsa_scores.append(s_val)
+                elif "system" in name or "design" in name or "architecture" in name:
+                    sys_scores.append(s_val)
+                elif "behavioral" in name or "leadership" in name or "culture" in name:
+                    beh_scores.append(s_val)
+                else:
+                    prob_scores.append(s_val)
+
+    def _safe_avg(lst, fallback=75.0):
+        return round(sum(lst) / len(lst), 1) if lst else fallback
+
+    radar = SkillsRadarAverage(
+        dsa_score=_safe_avg(dsa_scores, avg_score),
+        system_design_score=_safe_avg(sys_scores, avg_score),
+        behavioral_score=_safe_avg(beh_scores, avg_score),
+        problem_solving_score=_safe_avg(prob_scores, avg_score),
+        communication_score=_safe_avg(comm_scores, 80.0)
+    )
+
+    from collections import Counter
+    top_str = [item for item, _ in Counter(all_strengths).most_common(5)]
+    top_weak = [item for item, _ in Counter(all_weaknesses).most_common(5)]
+
+    return CandidateAnalyticsOverview(
+        user_id=user_id,
+        total_interviews_taken=total_interviews,
+        completed_interviews=len(completed),
+        average_score=round(avg_score, 1),
+        highest_score=round(highest, 1),
+        lowest_score=round(lowest, 1),
+        hire_recommendation_rate=hire_rate,
+        score_trends=trends,
+        skills_radar=radar,
+        top_recurring_strengths=top_str,
+        top_recurring_weaknesses=top_weak
     )
 
 @router.get("/{interview_id}", response_model=FeedbackReportResponse)
@@ -60,17 +202,6 @@ async def get_interview_feedback(
         )
 
     return build_feedback_response(db_fb)
-
-@router.get("/user/history", response_model=List[FeedbackReportResponse])
-async def get_user_feedback_history(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
-):
-    """Retrieve past feedback reports for the current user."""
-    stmt = select(FeedbackReportModel).where(FeedbackReportModel.user_id == user_id).order_by(FeedbackReportModel.created_at.desc())
-    res = await db.execute(stmt)
-    records = res.scalars().all()
-    return [build_feedback_response(r) for r in records]
 
 @router.post("/{interview_id}/generate", response_model=FeedbackReportResponse)
 async def generate_feedback_report(

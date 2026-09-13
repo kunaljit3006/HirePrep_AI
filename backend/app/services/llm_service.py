@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from app.config import settings
 
 logger = logging.getLogger("hireprep.llm")
@@ -29,9 +29,10 @@ AGENT_MODELS = {
         "gemini/gemini-2.5-flash"
     ],
     "evaluate_response": [
+        "gemini/gemini-2.5-flash",
+        "groq/llama3-8b-8192",
         "groq/openai/gpt-oss-20b",
-        "groq/qwen/qwen3.6-27b",
-        "gemini/gemini-2.5-flash"
+        "groq/qwen/qwen3.6-27b"
     ],
     "feedback_generator": [
         "groq/openai/gpt-oss-120b",
@@ -57,11 +58,14 @@ class LLMService:
         agent_name: str,
         messages: List[Dict[str, str]],
         temperature: float = 0.6,
-        response_format: Optional[Dict[str, str]] = None
-    ) -> str:
+        response_format: Optional[Dict[str, str]] = None,
+        max_tokens: Optional[int] = None,
+        stream: bool = False
+    ) -> Any:
         """
         Execute an LLM call through LiteLLM with multi-provider fallback.
         If all providers fail or no API keys are provided, falls back to simulated agent responses.
+        If stream=True, returns an AsyncGenerator. Otherwise returns a string.
         """
         candidate_models = AGENT_MODELS.get(agent_name, ["groq/llama-3.3-70b-versatile", "gemini/gemini-2.0-flash"])
         
@@ -85,16 +89,30 @@ class LLMService:
                     kwargs = {
                         "model": model,
                         "messages": messages,
-                        "temperature": temperature
+                        "temperature": temperature,
+                        "stream": stream
                     }
                     if response_format:
                         kwargs["response_format"] = response_format
+                    if max_tokens:
+                        kwargs["max_tokens"] = max_tokens
 
                     response = await litellm.acompletion(**kwargs)
-                    content = response.choices[0].message.content
-                    if content:
-                        logger.info(f"Agent '{agent_name}' successfully called model '{model}'")
-                        return content
+                    
+                    if stream:
+                        async def stream_generator():
+                            async for chunk in response:
+                                if getattr(chunk, "choices", None) and len(chunk.choices) > 0:
+                                    delta = chunk.choices[0].delta
+                                    if getattr(delta, "content", None):
+                                        yield delta.content
+                        logger.info(f"Agent '{agent_name}' successfully started streaming model '{model}'")
+                        return stream_generator()
+                    else:
+                        content = response.choices[0].message.content
+                        if content:
+                            logger.info(f"Agent '{agent_name}' successfully called model '{model}'")
+                            return content
                 except Exception as e:
                     logger.warning(f"Model '{model}' failed for agent '{agent_name}': {e}. Trying fallback...")
                     continue
@@ -102,7 +120,20 @@ class LLMService:
             logger.warning("litellm not imported, proceeding with fallback")
 
         # Context-aware deterministic fallback for local dev / offline testing
-        return self._generate_fallback(agent_name, messages)
+        fallback_text = self._generate_fallback(agent_name, messages)
+        
+        if stream:
+            async def fallback_stream():
+                # Yield fallback word by word to simulate streaming
+                import asyncio
+                import re
+                words = re.split(r'(\s+)', fallback_text)
+                for w in words:
+                    yield w
+                    await asyncio.sleep(0.02)
+            return fallback_stream()
+            
+        return fallback_text
 
     def _generate_fallback(self, agent_name: str, messages: List[Dict[str, str]]) -> str:
         """
@@ -225,44 +256,16 @@ class LLMService:
             candidate_text = ""
             for m in messages:
                 content = m.get("content", "")
-                if "Candidate Said:" in content:
-                    candidate_text = content.split("Candidate Said:")[-1].split("Instructions:")[0].lower()
+                if "Candidate Said / Presented:" in content:
+                    candidate_text = content.split("Candidate Said / Presented:")[-1].split("Instructions:")[0].split("Evaluation Schema")[0].split("Return pure JSON:")[0].lower()
+                    break
+                elif "Candidate Said:" in content:
+                    candidate_text = content.split("Candidate Said:")[-1].split("Instructions:")[0].split("Evaluation Schema")[0].split("Return pure JSON:")[0].lower()
                     break
                 elif "Candidate Answer:" in content:
-                    candidate_text = content.split("Candidate Answer:")[-1].split("Instructions:")[0].lower()
+                    candidate_text = content.split("Candidate Answer:")[-1].split("Instructions:")[0].split("Evaluation Schema")[0].split("Return pure JSON:")[0].lower()
                     break
             target_text = candidate_text if candidate_text else all_content
-
-            # Check if candidate is asking for a hint
-            is_hint_phrase = any(phrase in target_text for phrase in [
-                "hint", "pointer", "stuck", "nudge", "guidance", "help on",
-                "how to approach", "clue", "suggest a direction"
-            ])
-            if is_hint_phrase:
-                hint_tier = 1
-                for m in messages:
-                    c = m.get("content", "")
-                    if "Current Tier: 2/3" in c:
-                        hint_tier = 2
-                    elif "Current Tier: 3/3" in c:
-                        hint_tier = 3
-
-                if hint_tier == 1:
-                    hint_msg = "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade a small amount of memory for instant O(1) lookups."
-                elif hint_tier == 2:
-                    hint_msg = "Take a closer look at what state needs to be maintained: tracking the complement (target - current) allows you to check if the pair has already been visited."
-                else:
-                    hint_msg = "Here is the concrete approach: as you iterate through the array, insert each number into your hash map after checking if target - current exists."
-
-                return json.dumps({
-                    "intent": "hint_request",
-                    "clarification_answer": None,
-                    "hint_content": hint_msg,
-                    "score": None,
-                    "feedback": f"Candidate effectively leveraged a Tier {hint_tier} hint to proceed.",
-                    "difficulty_adjustment": "same",
-                    "probe_topic": None
-                })
 
             # Check if candidate is verifying their thought process / approach ("right track" co-pilot)
             is_approach_phrase = any(phrase in target_text for phrase in [
@@ -292,6 +295,37 @@ class LLMService:
                     "hint_content": None,
                     "score": None,
                     "feedback": "Candidate proactively verified algorithmic intuition and approach with the interviewer.",
+                    "difficulty_adjustment": "same",
+                    "probe_topic": None
+                })
+
+            # Check if candidate is asking for a hint
+            is_hint_phrase = any(phrase in target_text for phrase in [
+                "hint", "stuck", "nudge", "guidance", "help on",
+                "how to approach", "clue", "suggest a direction", "small pointer", "give me a pointer"
+            ])
+            if is_hint_phrase:
+                hint_tier = 1
+                for m in messages:
+                    c = m.get("content", "")
+                    if "Current Tier: 2/3" in c:
+                        hint_tier = 2
+                    elif "Current Tier: 3/3" in c:
+                        hint_tier = 3
+
+                if hint_tier == 1:
+                    hint_msg = "Sure! Here is a quick pointer: Consider using a Hash Map or Two Pointers to trade a small amount of memory for instant O(1) lookups."
+                elif hint_tier == 2:
+                    hint_msg = "Take a closer look at what state needs to be maintained: tracking the complement (target - current) allows you to check if the pair has already been visited."
+                else:
+                    hint_msg = "Here is the concrete approach: as you iterate through the array, insert each number into your hash map after checking if target - current exists."
+
+                return json.dumps({
+                    "intent": "hint_request",
+                    "clarification_answer": None,
+                    "hint_content": hint_msg,
+                    "score": None,
+                    "feedback": f"Candidate effectively leveraged a Tier {hint_tier} hint to proceed.",
                     "difficulty_adjustment": "same",
                     "probe_topic": None
                 })
