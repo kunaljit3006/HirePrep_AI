@@ -47,6 +47,11 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
     candidate_sentiment = state.get("candidate_sentiment", "neutral")
     missing_star = state.get("missing_star_component")
     
+    # Adaptive Behavioral State
+    behavioral_strategies = state.get("behavioral_strategies", [])
+    candidate_conversational_state = state.get("candidate_conversational_state", {})
+    conversation_memory = state.get("conversation_memory", [])
+    
     elapsed_min = 0
     if transcript:
         elapsed_min = int((time.time() - transcript[0].get("timestamp", time.time())) // 60)
@@ -69,7 +74,8 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
     elif isinstance(skills_raw, list):
         skills_list = skills_raw
 
-    top_proj = projects[0] if projects else None
+    import random
+    top_proj = random.choice(projects[:3]) if projects else None
     top_proj_name = top_proj.get("name") if top_proj else None
     top_proj_tech = ", ".join(top_proj.get("tech_stack", [])[:3]) if top_proj else ""
     past_company = experience[0].get("company") if experience and experience[0].get("company") else None
@@ -131,9 +137,19 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
     stage_bridge = ""
     if idx == 0:
         if top_proj_name:
-            stage_bridge = f"Warmly welcome {c_name} by name. Mention that you reviewed their CV and specifically noticed their work on '{top_proj_name}'. Ask them to introduce themselves and walk through that project."
+            bridges = [
+                f"Warmly welcome {c_name}. Mention you reviewed their CV and were intrigued by '{top_proj_name}'. Ask them to introduce themselves and walk through that project.",
+                f"Greet {c_name} naturally. State that you're impressed by their work on '{top_proj_name}' and ask them to dive into the technical details.",
+                f"Welcome {c_name} to the interview. Start by asking for a quick self-introduction, followed by a deep-dive into the '{top_proj_name}' project."
+            ]
+            stage_bridge = random.choice(bridges)
         else:
-            stage_bridge = f"Warmly welcome {c_name} by name, introduce yourself, and ease in with a warm-up question about their background and recent engineering work."
+            bridges = [
+                f"Warmly welcome {c_name}, introduce yourself, and ask them for a quick overview of their recent engineering experience.",
+                f"Greet {c_name} naturally, state your role, and ease in by asking them to discuss a recent technical challenge they solved.",
+                f"Welcome {c_name} to the interview. Start with a warm ice-breaker asking them to introduce themselves and their technical background."
+            ]
+            stage_bridge = random.choice(bridges)
     elif round_type == "cs_fundamentals":
         stage_bridge = "Acknowledge their prior answer positively, and naturally bridge into testing core foundations and system trade-offs."
     elif round_type == "coding":
@@ -233,6 +249,22 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
         if missing_star:
             coach_instructions += f"- BEHAVIORAL COACHING: The candidate's behavioral answer missed the {missing_star}. Prompt them specifically for what the {missing_star} was.\n"
 
+        # Inject memory and behavioral instructions
+        memory_context = ""
+        if conversation_memory:
+            memories_str = " | ".join([f"[{m.get('memory_type', '')}] {m.get('content', '')}" for m in conversation_memory])
+            memory_context = f"High-Value Conversation Memory:\n{memories_str}\n"
+            
+        behavior_context = ""
+        if behavioral_strategies and "NO_SPECIAL_BEHAVIOR" not in behavioral_strategies:
+            b_str = ", ".join(behavioral_strategies)
+            behavior_context = f"BEHAVIORAL STRATEGY OVERRIDE: Implement the following strategies in your response: {b_str}.\n"
+            behavior_context += "- SIMPLIFY: Break down the concept, reduce constraints, or provide an easier path.\n" if "SIMPLIFY" in behavioral_strategies else ""
+            behavior_context += "- CHALLENGE: Push back gently, question their assumption, or introduce a harder edge-case.\n" if "CHALLENGE" in behavioral_strategies else ""
+            behavior_context += "- PROBE_DEEPER: Ask them 'why' or 'how' it works under the hood.\n" if "PROBE_DEEPER" in behavioral_strategies else ""
+            behavior_context += "- ENCOURAGE: Provide an enthusiastic, human validation ('Great point!', 'I love that approach.').\n" if "ENCOURAGE" in behavioral_strategies else ""
+            behavior_context += "- REVISIT: Transition back to an older deferred topic if relevant.\n" if "REVISIT" in behavioral_strategies else ""
+
         prompt = (
             f"You are a Senior Staff Engineer and technical interviewer at {company} interviewing {c_name} for {role}.\n"
             f"{persona_guide}"
@@ -246,6 +278,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             f"Stage Bridge Context: {stage_bridge}\n\n"
             "ADAPTIVE INTERVIEW SIGNALS:\n"
             f"{adaptive_context if adaptive_context else 'None (First Question)'}\n"
+            f"{memory_context}"
             f"Elapsed Interview Time: {elapsed_min} minutes.\n"
             "COMPANY-SPECIFIC INTERVIEW CONTEXT (From Web Intelligence):\n"
             f"{web_intel[:1000] if web_intel else 'None'}\n\n"
@@ -257,6 +290,7 @@ async def interview_conductor_node(state: InterviewState, config: RunnableConfig
             "- The question topics, scenarios, and evaluation criteria should reflect what {company} actually asks.\n"
             "- NEVER jump to a hard question without the candidate demonstrating mastery at medium first.\n\n"
             f"{coach_instructions}\n"
+            f"{behavior_context}\n"
             "HUMAN CONVERSATIONAL BRIDGING RULES:\n"
             "1. Deliver the question naturally, exactly as a human tech lead would on a video call or in-person interview.\n"
             "2. TRANSCRIPTION LENIENCY: You are reading raw, error-prone Speech-to-Text output. Do NOT take words literally if they don't fit the technical context. Phonetically deduce what the candidate actually meant. CRITICAL: Do NOT point out the typos, do NOT explain your deductions out loud, and do NOT break character to act like an AI assistant analyzing text. Silently deduce their intent and respond as a human interviewer continuing the conversation.\n"

@@ -72,4 +72,12 @@ class InterviewState(TypedDict):
     interview_structure_notes: Optional[str]  # Company-specific interview notes from web intel
     score_history: List[Dict[str, Any]]  # Per-question score records for feedback breakdown
     topics_covered: List[str]  # Topics already discussed to avoid repetition
+    
+    # Adaptive Behavioral Layer State
+    candidate_conversational_state: Optional[Dict[str, Any]]
+    behavioral_strategies: List[str]
+    conversation_memory: List[Dict[str, Any]]
+    speech_hesitation_duration: Optional[float]
+    recent_behaviors: List[str]
+    topics_to_revisit: List[Dict[str, Any]]
 

@@ -4,6 +4,10 @@ import logging
 from typing import Dict, Any
 from app.graph.state import InterviewState
 from app.services.llm_service import llm_service
+from app.services.behavior_validator import BehaviorValidator
+from app.services.memory_manager import MemoryManager
+from app.models.conversational_state import ConversationalStateSummary, BehaviorStrategy, MemoryType, ConversationMemoryItem
+import uuid
 
 logger = logging.getLogger("hireprep.node.evaluate_response")
 
@@ -14,7 +18,10 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
        or providing their technical answer.
     2. If clarifying: responds supportively as a human interviewer, stays on the same question, and awaits their code/answer.
     3. If answering: evaluates score, adapts difficulty, and checks for dynamic concept latching (e.g. multithreading, redis).
+    4. Extracts high-value conversational memory items and determines adaptive behavioral strategies.
     """
+    validator = BehaviorValidator()
+    memory_manager = MemoryManager(max_memories=15)
     questions = state.get("questions", [])
     idx = state.get("current_question_idx", 0)
     current_q = questions[idx] if idx < len(questions) else {}
@@ -26,6 +33,11 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
     diagram_data = state.get("diagram_data")
     awaiting_lang = state.get("awaiting_language_preference", False)
     preferred_lang = state.get("preferred_coding_language")
+
+    # Adaptive State
+    conversation_memory = list(state.get("conversation_memory", []))
+    recent_behaviors = list(state.get("recent_behaviors", []))
+    conversational_state = state.get("candidate_conversational_state", {})
 
     lower_ans = candidate_answer.lower().strip()
 
@@ -194,9 +206,16 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         "   - 'answer_depth': How thorough was the answer? 'shallow' (surface-level, buzzword-dropping), 'adequate' (solid but no extras), 'deep' (thorough with edge cases and trade-offs).\n"
         "   - 'concept_gaps': List specific concepts the candidate was weak on or missed (e.g., ['cache invalidation', 'race conditions']). Empty list if none.\n"
         "   - 'strengths': List specific concepts the candidate demonstrated mastery of (e.g., ['hash maps', 'SQL joins']). Empty list if none.\n"
-        "   - 'next_question_guidance': A short instruction for the next question. Examples: 'Ask a simpler follow-up on OOP basics', 'They aced this - escalate to distributed systems', 'Probe their weak understanding of concurrency'.\n\n"
+        "   - 'next_question_guidance': A short instruction for the next question. Examples: 'Ask a simpler follow-up on OOP basics', 'They aced this - escalate to distributed systems', 'Probe their weak understanding of concurrency'.\n"
+        "6. ADAPTIVE BEHAVIOR & MEMORY (REQUIRED):\n"
+        "   - 'behavioral_strategies': Select up to 2 behaviors to use for the next interaction from: [SIMPLIFY, CHALLENGE, PROBE_DEEPER, ENCOURAGE, REVISIT, NO_SPECIAL_BEHAVIOR].\n"
+        "     * If Score < 45 (Weak): Prioritize SIMPLIFY or ENCOURAGE. Do NOT CHALLENGE.\n"
+        "     * If Score 45-70 (Moderate): Prioritize PROBE_DEEPER (conceptual follow-up).\n"
+        "     * If Score 71-90 (Strong): Prioritize PROBE_DEEPER (implementation/mechanism).\n"
+        "     * If Score > 90 (Excellent): Prioritize CHALLENGE (advanced edge cases).\n"
+        "   - 'new_memory_items': If the candidate made a technical claim, project decision, or stated their experience that should be remembered, list them. Max 2 items.\n\n"
         "Return pure JSON:\n"
-        '{"intent": "approach_check"|"clarification"|"hint_request"|"answer", "affirmation_content": string|null, "track_status": "on_track"|"partially_on_track"|"off_track"|null, "clarification_answer": string|null, "hint_content": string|null, "score": float|null, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string|null, "answer_depth": "shallow"|"adequate"|"deep"|null, "concept_gaps": [string], "strengths": [string], "next_question_guidance": string|null, "spof_risks": [string], "bottlenecks": [string], "logic_correction": string|null, "is_tangent": boolean, "sentiment": "struggling_emotionally"|"neutral", "missing_star_component": string|null}'
+        '{"intent": "approach_check"|"clarification"|"hint_request"|"answer", "affirmation_content": string|null, "track_status": "on_track"|"partially_on_track"|"off_track"|null, "clarification_answer": string|null, "hint_content": string|null, "score": float|null, "feedback": string, "difficulty_adjustment": "easier"|"same"|"harder", "probe_topic": string|null, "answer_depth": "shallow"|"adequate"|"deep"|null, "concept_gaps": [string], "strengths": [string], "next_question_guidance": string|null, "spof_risks": [string], "bottlenecks": [string], "logic_correction": string|null, "is_tangent": boolean, "sentiment": "struggling_emotionally"|"neutral", "missing_star_component": string|null, "behavioral_strategies": [string], "new_memory_items": [{"type": string, "content": string}]}'
     )
 
     messages = [
@@ -234,6 +253,8 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         is_tangent = eval_dict.get("is_tangent", False)
         sentiment = eval_dict.get("sentiment", "neutral")
         missing_star_component = eval_dict.get("missing_star_component")
+        raw_behaviors = eval_dict.get("behavioral_strategies", ["NO_SPECIAL_BEHAVIOR"])
+        raw_memories = eval_dict.get("new_memory_items", [])
     except Exception:
         # Heuristic intent & probing fallback if external LLM provider quota is momentarily exceeded
         if any(h in lower_ans for h in ["hint", "stuck", "pointer", "clue", "nudge"]):
@@ -292,6 +313,8 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         is_tangent = False
         sentiment = "neutral"
         missing_star_component = None
+        raw_behaviors = ["NO_SPECIAL_BEHAVIOR"]
+        raw_memories = []
 
         spof_risks = ["Single database instance presents a SPOF"] if diagram_data else []
         bottlenecks = ["Potential read saturation under peak traffic"] if diagram_data else []
@@ -449,6 +472,46 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
     else:
         cumulative_perf = "average"
 
+    # Add new memories
+    transcript = list(state.get("transcript", []))
+    turn_index = len(transcript)
+    if raw_memories:
+        for rm in raw_memories:
+            try:
+                mem_type = rm.get("type", "GENERAL")
+                MemoryType(mem_type) # validate
+                mem_item = {
+                    "id": str(uuid.uuid4()),
+                    "memory_type": mem_type,
+                    "content": rm.get("content", ""),
+                    "turn_index": turn_index,
+                    "topic": current_q.get("topic", ""),
+                    "value_score": 8 if intent == "answer" else 4
+                }
+                conversation_memory = memory_manager.add_memory(conversation_memory, mem_item)
+            except Exception as e:
+                logger.error(f"Error adding memory: {e}")
+                
+    conversation_memory = memory_manager.summarize_if_needed(conversation_memory, llm_service)
+
+    # Validate and Resolve Behavioral Strategies
+    candidate_state_summary = ConversationalStateSummary(
+        current_topic=current_q.get("topic"),
+        current_mastery=cumulative_perf,
+        confidence="low" if sentiment == "struggling_emotionally" else "average",
+        recent_performance_trend="stable",
+        current_difficulty=state.get("difficulty_level", "medium"),
+        follow_up_needed=bool(probe_topic and follow_ups_done < 2),
+        relevant_weak_areas=existing_gaps,
+        relevant_topics_to_revisit=list(state.get("topics_to_revisit", [])),
+        current_answer_score=score
+    ).model_dump()
+    
+    validated_behaviors = validator.validate_and_resolve(raw_behaviors, candidate_state_summary, recent_behaviors)
+    recent_behaviors.extend(validated_behaviors)
+    if len(recent_behaviors) > 10:
+        recent_behaviors = recent_behaviors[-10:]
+
     # Human Interviewer Latching Rule: If candidate mentioned an interesting tech/concept and hasn't been probed enough (< 2 follow-ups):
     should_probe = bool(probe_topic and follow_ups_done < 2)
 
@@ -498,4 +561,8 @@ async def evaluate_response_node(state: InterviewState) -> Dict[str, Any]:
         "is_tangent": is_tangent,
         "candidate_sentiment": sentiment,
         "missing_star_component": missing_star_component,
+        "candidate_conversational_state": candidate_state_summary,
+        "behavioral_strategies": validated_behaviors,
+        "conversation_memory": conversation_memory,
+        "recent_behaviors": recent_behaviors
     }

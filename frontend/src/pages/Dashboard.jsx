@@ -104,7 +104,7 @@ export default function Dashboard() {
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture
 
   const totalInterviews = profile?.stats?.total_interviews ?? 0
-  const avgScore = profile?.stats?.average_score ? `${profile.stats.average_score}/10` : '—'
+  const avgScore = profile?.stats?.average_score ? `${profile.stats.average_score}/100` : '—'
 
   // Render circular avatar respecting the rule:
   // "i circle will show the email profile pic if user used email or first letter of his name if phone no"
@@ -293,9 +293,6 @@ export default function Dashboard() {
       <StartInterviewModal
         isOpen={isStartInterviewOpen}
         onClose={() => setIsStartInterviewOpen(false)}
-        defaultCompany="Google"
-        defaultRole="Full Stack AI Engineer"
-        defaultLocation="India / Hybrid"
       />
 
       {/* Past Interview History Modal */}
